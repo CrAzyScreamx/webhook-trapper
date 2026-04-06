@@ -1,0 +1,27 @@
+services:
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "${PORT:-3001}:3001"
+    depends_on:
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3001}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  app-data:

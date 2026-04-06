@@ -1,0 +1,9 @@
+.env
+client/dist
+server/dist
+node_modules
+client/node_modules
+server/node_modules
+data/trapper.db
+stitch
+tasks.md
