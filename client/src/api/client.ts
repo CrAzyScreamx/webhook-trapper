@@ -29,7 +29,7 @@ export interface Trapper {
   status: 'active' | 'paused';
   destinationUrl: string;
   retryPolicy: 'exponential' | 'immediate' | 'none';
-  authType: 'bearer' | 'basic' | 'hmac' | 'none';
+  authType: 'bearer' | 'basic' | 'hmac' | 'none' | 'custom';
   authValue: string | null;
   rateLimit: number | null;
   rateLimitWindowMs: number | null;

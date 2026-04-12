@@ -800,11 +800,12 @@ export default function FilterConfig() {
                     <MenuItem value="bearer" sx={{ fontSize: '0.72rem' }}>Bearer Token</MenuItem>
                     <MenuItem value="basic" sx={{ fontSize: '0.72rem' }}>Basic</MenuItem>
                     <MenuItem value="hmac" sx={{ fontSize: '0.72rem' }}>HMAC</MenuItem>
+                    <MenuItem value="custom" sx={{ fontSize: '0.72rem' }}>Custom</MenuItem>
                   </Select>
                 </FormControl>
               </Stack>
 
-              {destForm.authType !== 'none' && (
+              {destForm.authType !== 'none' && destForm.authType !== 'custom' && (
                 <TextField
                   label="Auth Value" fullWidth size="small" type="password"
                   value={destForm.authValue}

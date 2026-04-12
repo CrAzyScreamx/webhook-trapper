@@ -59,7 +59,7 @@ export type WebhookLogInsert = typeof webhookLogs.$inferInsert;
 
 // Enum-style string literal types
 export type RetryPolicy = 'exponential' | 'immediate' | 'none';
-export type AuthType = 'bearer' | 'basic' | 'hmac' | 'none';
+export type AuthType = 'bearer' | 'basic' | 'hmac' | 'none' | 'custom';
 export type TrapperStatus = 'active' | 'paused';
 export type LogStatus = 'SENT' | 'FILTERED' | 'REJECTED' | 'QUEUED';
 export type Operator =

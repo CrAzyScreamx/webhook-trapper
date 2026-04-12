@@ -18,6 +18,7 @@ function buildAuthHeaders(authType: AuthType, authValue: string | null): Record<
       return { Authorization: `Basic ${Buffer.from(authValue).toString('base64')}` };
     case 'hmac':
       return { 'X-Signature': authValue };
+    case 'custom':
     default:
       return {};
   }
