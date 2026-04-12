@@ -603,7 +603,7 @@ export default function FilterConfig() {
 
 
       {/* 00 — Source Payload (last execution only) */}
-      {lastPayload && (
+      {lastPayload != null && (
         <Paper sx={{ p: 2.5, mb: 2, border: `1px solid ${theme.palette.custom.border}` }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
             <SectionLabel text="LAST EXECUTION PAYLOAD" />

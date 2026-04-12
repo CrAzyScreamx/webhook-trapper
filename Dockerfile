@@ -45,7 +45,7 @@ ENV NODE_ENV=production \
     REDIS_URL=redis://redis:6379 \
     JWT_SECRET= \
     ADMIN_USERNAME=admin \
-    ADMIN_PASSWORD_HASH=
+    ADMIN_PASSWORD=
 
 EXPOSE 3001
 
