@@ -346,6 +346,13 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
   const destStatus = result.destination?.status;
   const destOk = destStatus && destStatus >= 200 && destStatus < 300;
 
+  // Pre-compute body as string so `unknown` never flows into JSX children
+  const bodyText: string | null = result.destination?.body != null
+    ? (typeof result.destination.body === 'string'
+        ? result.destination.body
+        : JSON.stringify(result.destination.body, null, 2))
+    : null;
+
   return (
     <Paper sx={{ mb: 2, border: `1px solid ${alpha(passColor, 0.27)}`, overflow: 'hidden' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1.25 }}>
@@ -375,7 +382,7 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
               ✕ {result.destination.error}
             </Typography>
           )}
-          {result.destination?.body != null && (
+          {bodyText != null && (
             <>
               <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.1em', mb: 0.5 }}>
                 DESTINATION RESPONSE
@@ -385,9 +392,7 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
                 bgcolor: theme.palette.custom.inputBg, maxHeight: 200, overflow: 'auto',
               }}>
                 <Typography sx={{ fontSize: '0.72rem', fontFamily: MONO, color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                  {typeof result.destination.body === 'string'
-                    ? result.destination.body
-                    : JSON.stringify(result.destination.body, null, 2)}
+                  {bodyText}
                 </Typography>
               </Box>
             </>
