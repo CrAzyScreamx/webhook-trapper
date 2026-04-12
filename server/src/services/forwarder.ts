@@ -22,6 +22,7 @@ function buildAuthHeaders(authType: AuthType, authValue: string | null): Record<
     case 'hmac':
       return { 'X-Signature': authValue };
     case 'custom':
+      return { Authorization: authValue };
     default:
       return {};
   }

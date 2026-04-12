@@ -813,7 +813,7 @@ export default function FilterConfig() {
                 </FormControl>
               </Stack>
 
-              {destForm.authType !== 'none' && destForm.authType !== 'custom' && (
+              {destForm.authType !== 'none' && (
                 <TextField
                   label="Auth Value" fullWidth size="small" type="password"
                   value={destForm.authValue}
