@@ -18,7 +18,7 @@ import './queue/webhookWorker';
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
-app.use(helmet({ hsts: false }));
+app.use(helmet({ hsts: false, contentSecurityPolicy: false }));
 app.use(cors());
 app.use(globalRateLimiter);
 
