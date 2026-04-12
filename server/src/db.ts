@@ -56,7 +56,8 @@ export function initDb(): void {
       status TEXT NOT NULL,
       responseCode INTEGER,
       latency INTEGER,
-      errorMessage TEXT
+      errorMessage TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 

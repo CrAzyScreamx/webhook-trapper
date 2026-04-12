@@ -14,6 +14,7 @@ const router = Router();
 router.use(perTrapperRateLimiter);
 
 router.post('/:trapId', async (req: Request, res: Response) => {
+  try {
   const trapper = db.select().from(trappers).where(eq(trappers.trapId, req.params.trapId)).get();
   if (!trapper) {
     res.status(404).json({ error: 'Trapper not found' });
@@ -21,6 +22,11 @@ router.post('/:trapId', async (req: Request, res: Response) => {
   }
 
   const rawBody = req.body as Buffer;
+  if (!Buffer.isBuffer(rawBody)) {
+    res.status(400).json({ error: 'Content-Type must be application/json' });
+    return;
+  }
+
   let payload: unknown;
 
   if (trapper.hmacSecret) {
@@ -127,6 +133,12 @@ router.post('/:trapId', async (req: Request, res: Response) => {
 
   await enqueueWebhook(jobData, trapper.retryPolicy as RetryPolicy);
   res.status(200).json({ status: 'QUEUED' });
+  } catch (err) {
+    console.error('[ingest] unhandled error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 });
 
 export default router;

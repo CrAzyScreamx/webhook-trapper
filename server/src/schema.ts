@@ -46,6 +46,7 @@ export const webhookLogs = sqliteTable('webhook_logs', {
   responseCode: integer('responseCode'),
   latency: integer('latency'),
   errorMessage: text('errorMessage'),
+  createdAt: text('createdAt').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Inferred types
