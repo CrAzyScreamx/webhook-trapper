@@ -849,14 +849,11 @@ export default function FilterConfig() {
                       },
                     }}
                   />
-                  {destForm.overridePayload && (() => {
-                    try { JSON.parse(destForm.overridePayload); return null; }
-                    catch { return (
-                      <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>
-                        Invalid JSON
-                      </Typography>
-                    ); }
-                  })()}
+                  {destForm.overridePayload && !(() => { try { JSON.parse(destForm.overridePayload); return true; } catch { return false; } })() && (
+                    <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>
+                      Invalid JSON
+                    </Typography>
+                  )}
                 </Box>
               )}
 
