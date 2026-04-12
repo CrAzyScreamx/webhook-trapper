@@ -898,6 +898,9 @@ export default function FilterConfig() {
                       },
                     }}
                   />
+                  <Typography sx={{ fontSize: '0.58rem', fontFamily: MONO, color: theme.palette.custom.hoverBorder, mt: 0.5 }}>
+                    Use {'{{'}'field.path'{'}}'}  to inject values from the original payload
+                  </Typography>
                   {destForm.overridePayload && !(() => { try { JSON.parse(destForm.overridePayload); return true; } catch { return false; } })() && (
                     <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>
                       Invalid JSON

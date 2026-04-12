@@ -8,6 +8,7 @@ import { evaluate } from '../services/filterEngine';
 import { emit } from '../sse';
 import { perTrapperRateLimiter } from '../middleware/rateLimiter';
 import { enqueueWebhook, WebhookJobData } from '../queue/webhookQueue';
+import { applyTemplate } from '../services/templateEngine';
 
 const router = Router();
 
@@ -116,7 +117,8 @@ router.post('/:trapId', async (req: Request, res: Response) => {
   let forwardPayload = payload;
   if (trapper.overrideEnabled && trapper.overridePayload) {
     try {
-      forwardPayload = JSON.parse(trapper.overridePayload);
+      const overrideParsed = JSON.parse(trapper.overridePayload);
+      forwardPayload = applyTemplate(overrideParsed, payload);
     } catch {
       // malformed override JSON — fall back to original payload
     }

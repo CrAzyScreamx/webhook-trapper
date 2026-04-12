@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
 import { trappers, filterRules, webhookLogs, type Trapper } from '../schema';
 import { evaluate } from '../services/filterEngine';
+import { send } from '../services/forwarder';
+import { applyTemplate } from '../services/templateEngine';
 import { invalidateTrapperLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
@@ -134,47 +136,47 @@ router.put('/:id/rules', async (req: Request, res: Response) => {
 
 // POST /api/trappers/:id/test
 router.post('/:id/test', async (req: Request, res: Response) => {
-  const trapper = db.select().from(trappers).where(eq(trappers.id, req.params.id)).get();
-  if (!trapper) { res.status(404).json({ error: 'Not found' }); return; }
+  try {
+    const trapper = db.select().from(trappers).where(eq(trappers.id, req.params.id)).get();
+    if (!trapper) { res.status(404).json({ error: 'Not found' }); return; }
 
-  const { rules, payload } = req.body;
-  if (!payload) { res.status(400).json({ error: 'payload is required' }); return; }
+    const { rules, payload } = req.body;
+    if (!payload) { res.status(400).json({ error: 'payload is required' }); return; }
 
-  const parsedRules = (rules ?? []) as Array<{ fieldPath: string; operator: import('../schema').Operator; value: string | null; logicOp?: 'AND' | 'OR'; groupBefore?: number; groupAfter?: number }>;
-  const filterPassed = evaluate(parsedRules, payload);
+    const parsedRules = (rules ?? []) as Array<{ fieldPath: string; operator: import('../schema').Operator; value: string | null; logicOp?: 'AND' | 'OR'; groupBefore?: number; groupAfter?: number }>;
+    const filterPassed = evaluate(parsedRules, payload);
 
-  const result: { filterPassed: boolean; destination?: { status: number; body: unknown; error?: string } } = { filterPassed };
+    const result: { filterPassed: boolean; destination?: { status: number | null; body: unknown; error?: string } } = { filterPassed };
 
-  if (filterPassed) {
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (trapper.authType === 'bearer' && trapper.authValue) {
-        headers['Authorization'] = `Bearer ${trapper.authValue}`;
-      } else if (trapper.authType === 'basic' && trapper.authValue) {
-        headers['Authorization'] = `Basic ${trapper.authValue}`;
+    if (filterPassed) {
+      let forwardPayload = payload;
+      if (trapper.overrideEnabled && trapper.overridePayload) {
+        try {
+          const overrideParsed = JSON.parse(trapper.overridePayload);
+          forwardPayload = applyTemplate(overrideParsed, payload);
+        } catch { /* malformed override — fall back */ }
       }
 
-      const fetchResp = await fetch(trapper.destinationUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-
-      let body: unknown;
-      const ct = fetchResp.headers.get('content-type') ?? '';
-      if (ct.includes('application/json')) {
-        body = await fetchResp.json();
-      } else {
-        body = await fetchResp.text();
-      }
-
-      result.destination = { status: fetchResp.status, body };
-    } catch (err: unknown) {
-      result.destination = { status: 0, body: null, error: err instanceof Error ? err.message : 'Unknown error' };
+      const forward = await send(
+        trapper.destinationUrl,
+        forwardPayload,
+        trapper.authType as import('../schema').AuthType,
+        trapper.authValue,
+        !!trapper.skipTlsVerify,
+        trapper.customAuthHeader ?? null,
+      );
+      result.destination = {
+        status: forward.responseCode,
+        body: null,
+        ...(forward.errorMessage ? { error: forward.errorMessage } : {}),
+      };
     }
-  }
 
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    console.error('[test] unhandled error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;
