@@ -11,7 +11,7 @@ export interface ForwardResult {
   errorMessage: string | null;
 }
 
-function buildAuthHeaders(authType: AuthType, authValue: string | null): Record<string, string> {
+function buildAuthHeaders(authType: AuthType, authValue: string | null, customAuthHeader: string | null = null): Record<string, string> {
   if (!authValue) return {};
 
   switch (authType) {
@@ -22,7 +22,7 @@ function buildAuthHeaders(authType: AuthType, authValue: string | null): Record<
     case 'hmac':
       return { 'X-Signature': authValue };
     case 'custom':
-      return { Authorization: authValue };
+      return { [customAuthHeader || 'Authorization']: authValue };
     default:
       return {};
   }
@@ -33,9 +33,10 @@ export async function send(
   payload: unknown,
   authType: AuthType,
   authValue: string | null,
-  skipTlsVerify = false
+  skipTlsVerify = false,
+  customAuthHeader: string | null = null
 ): Promise<ForwardResult> {
-  const authHeaders = buildAuthHeaders(authType, authValue);
+  const authHeaders = buildAuthHeaders(authType, authValue, customAuthHeader);
 
   try {
     const start = Date.now();

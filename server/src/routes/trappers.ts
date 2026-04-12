@@ -21,7 +21,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 // POST /api/trappers
 router.post('/', async (req: Request, res: Response) => {
-  const { name, description, trapId, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify } = req.body;
+  const { name, description, trapId, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify, customAuthHeader } = req.body;
   if (!name || !trapId || !destinationUrl) {
     res.status(400).json({ error: 'name, trapId and destinationUrl are required' });
     return;
@@ -49,6 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
     overrideEnabled: overrideEnabled ? 1 : 0,
     overridePayload: overridePayload ?? null,
     skipTlsVerify: skipTlsVerify ? 1 : 0,
+    customAuthHeader: customAuthHeader ?? null,
   }).returning().all();
   res.status(201).json(sanitizeTrapper(trapper));
 });
@@ -64,9 +65,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const trapper = db.select().from(trappers).where(eq(trappers.id, req.params.id)).get();
   if (!trapper) { res.status(404).json({ error: 'Not found' }); return; }
-  const { name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify } = req.body;
+  const { name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify, customAuthHeader } = req.body;
   const [updated] = db.update(trappers)
-    .set({ name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled: overrideEnabled ? 1 : 0, overridePayload: overridePayload ?? null, skipTlsVerify: skipTlsVerify ? 1 : 0, updatedAt: new Date().toISOString() })
+    .set({ name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled: overrideEnabled ? 1 : 0, overridePayload: overridePayload ?? null, skipTlsVerify: skipTlsVerify ? 1 : 0, customAuthHeader: customAuthHeader ?? null, updatedAt: new Date().toISOString() })
     .where(eq(trappers.id, req.params.id))
     .returning()
     .all();

@@ -19,6 +19,7 @@ export const trappers = sqliteTable('trappers', {
   overrideEnabled: integer('overrideEnabled').notNull().default(0),
   overridePayload: text('overridePayload'),
   skipTlsVerify: integer('skipTlsVerify').notNull().default(0),
+  customAuthHeader: text('customAuthHeader'),
   createdAt: text('createdAt').notNull().default(sql`(datetime('now'))`),
   updatedAt: text('updatedAt').notNull().default(sql`(datetime('now'))`),
 });

@@ -30,6 +30,7 @@ export function initDb(): void {
       overrideEnabled INTEGER NOT NULL DEFAULT 0,
       overridePayload TEXT,
       skipTlsVerify INTEGER NOT NULL DEFAULT 0,
+      customAuthHeader TEXT,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -66,6 +67,7 @@ export function initDb(): void {
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN overrideEnabled INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN overridePayload TEXT`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN skipTlsVerify INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN customAuthHeader TEXT`); } catch { /* already exists */ }
 }
 
 export default db;

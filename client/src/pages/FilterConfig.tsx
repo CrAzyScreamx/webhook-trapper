@@ -30,6 +30,7 @@ type DestForm = {
   retryPolicy: string;
   authType: string;
   authValue: string;
+  customAuthHeader: string;
   overrideEnabled: boolean;
   overridePayload: string;
   skipTlsVerify: boolean;
@@ -423,7 +424,7 @@ export default function FilterConfig() {
 
   // Forms
   const [destForm, setDestForm] = useState<DestForm>({
-    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '', overrideEnabled: false, overridePayload: '', skipTlsVerify: false,
+    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '', customAuthHeader: 'Authorization', overrideEnabled: false, overridePayload: '', skipTlsVerify: false,
   });
   const [secForm, setSecForm] = useState<SecForm>({
     rateLimit: '', rateLimitWindowMs: '', hmacSecret: '', hmacHeader: '', hmacAlgorithm: 'sha256',
@@ -453,7 +454,7 @@ export default function FilterConfig() {
   useEffect(() => {
     trappersApi.get(id!).then((t) => {
       setTrapper(t);
-      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '', skipTlsVerify: t.skipTlsVerify ?? false });
+      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', customAuthHeader: t.customAuthHeader ?? 'Authorization', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '', skipTlsVerify: t.skipTlsVerify ?? false });
       setSecForm({
         rateLimit: t.rateLimit ?? '',
         rateLimitWindowMs: t.rateLimitWindowMs ?? '',
@@ -546,6 +547,7 @@ export default function FilterConfig() {
     await trappersApi.setRules(id!, rules.map((r, i) => ({ ...r, order: i })));
     await trappersApi.update(id!, {
       ...destForm,
+      customAuthHeader: destForm.authType === 'custom' ? (destForm.customAuthHeader || 'Authorization') : null,
       overrideEnabled: destForm.overrideEnabled,
       overridePayload: destForm.overrideEnabled && destForm.overridePayload ? destForm.overridePayload : null,
       skipTlsVerify: destForm.skipTlsVerify,
@@ -814,14 +816,27 @@ export default function FilterConfig() {
               </Stack>
 
               {destForm.authType !== 'none' && (
-                <TextField
-                  label="Auth Value" fullWidth size="small" type="password"
-                  value={destForm.authValue}
-                  onChange={(e) => setDestForm({ ...destForm, authValue: e.target.value })}
-                  InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
-                  InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
-                  sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-                />
+                <Stack gap={1.5}>
+                  {destForm.authType === 'custom' && (
+                    <TextField
+                      label="Header Key" fullWidth size="small"
+                      value={destForm.customAuthHeader}
+                      onChange={(e) => setDestForm({ ...destForm, customAuthHeader: e.target.value })}
+                      placeholder="Authorization"
+                      InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                      InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
+                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                    />
+                  )}
+                  <TextField
+                    label="Auth Value" fullWidth size="small" type="password"
+                    value={destForm.authValue}
+                    onChange={(e) => setDestForm({ ...destForm, authValue: e.target.value })}
+                    InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                    InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
+                    sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                  />
+                </Stack>
               )}
 
               <Divider sx={{ borderColor: theme.palette.custom.border }} />

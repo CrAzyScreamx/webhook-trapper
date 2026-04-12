@@ -39,6 +39,7 @@ export interface Trapper {
   overrideEnabled: boolean;
   overridePayload: string | null;
   skipTlsVerify: boolean;
+  customAuthHeader: string | null;
 }
 
 export interface FilterRule {
