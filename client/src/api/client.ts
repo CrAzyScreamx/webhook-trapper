@@ -38,6 +38,7 @@ export interface Trapper {
   hmacAlgorithm: 'sha256' | 'sha1';
   overrideEnabled: boolean;
   overridePayload: string | null;
+  skipTlsVerify: boolean;
 }
 
 export interface FilterRule {

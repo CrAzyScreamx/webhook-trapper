@@ -10,9 +10,9 @@ import { emit } from '../sse';
 const worker = new Worker<WebhookJobData>(
   'webhook-forward',
   async (job: Job<WebhookJobData>) => {
-    const { logId, destinationUrl, payload, authType, authValue } = job.data;
+    const { logId, destinationUrl, payload, authType, authValue, skipTlsVerify } = job.data;
 
-    const result = await send(destinationUrl, payload, authType, authValue);
+    const result = await send(destinationUrl, payload, authType, authValue, skipTlsVerify);
 
     const log = db.select().from(webhookLogs).where(eq(webhookLogs.id, logId)).get();
     if (log) {

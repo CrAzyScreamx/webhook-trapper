@@ -129,6 +129,7 @@ router.post('/:trapId', async (req: Request, res: Response) => {
     authType: trapper.authType as AuthType,
     authValue: trapper.authValue,
     payload: forwardPayload,
+    skipTlsVerify: !!trapper.skipTlsVerify,
   };
 
   await enqueueWebhook(jobData, trapper.retryPolicy as RetryPolicy);

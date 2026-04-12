@@ -1,5 +1,8 @@
 import axios from 'axios';
+import https from 'https';
 import { AuthType } from '../models/Trapper';
+
+const agentNoVerify = new https.Agent({ rejectUnauthorized: false });
 
 export interface ForwardResult {
   success: boolean;
@@ -28,7 +31,8 @@ export async function send(
   destinationUrl: string,
   payload: unknown,
   authType: AuthType,
-  authValue: string | null
+  authValue: string | null,
+  skipTlsVerify = false
 ): Promise<ForwardResult> {
   const authHeaders = buildAuthHeaders(authType, authValue);
 
@@ -38,6 +42,7 @@ export async function send(
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       timeout: 10000,
       validateStatus: () => true,
+      ...(skipTlsVerify ? { httpsAgent: agentNoVerify } : {}),
     });
     const latency = Date.now() - start;
     const responseCode = response.status;

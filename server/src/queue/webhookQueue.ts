@@ -9,6 +9,7 @@ export interface WebhookJobData {
   authType: AuthType;
   authValue: string | null;
   payload: unknown;
+  skipTlsVerify: boolean;
 }
 
 export const webhookQueue = new Queue('webhook-forward', { connection: redisClient });

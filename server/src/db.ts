@@ -29,6 +29,7 @@ export function initDb(): void {
       hmacAlgorithm TEXT NOT NULL DEFAULT 'sha256',
       overrideEnabled INTEGER NOT NULL DEFAULT 0,
       overridePayload TEXT,
+      skipTlsVerify INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -64,6 +65,7 @@ export function initDb(): void {
   // Migrations for existing databases
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN overrideEnabled INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN overridePayload TEXT`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN skipTlsVerify INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
 }
 
 export default db;

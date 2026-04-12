@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, Fragment } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Box, Typography, Paper, Stack, Button, TextField, Select, MenuItem,
   IconButton, Alert, FormControl, ToggleButton, ToggleButtonGroup, Chip,
@@ -32,6 +32,7 @@ type DestForm = {
   authValue: string;
   overrideEnabled: boolean;
   overridePayload: string;
+  skipTlsVerify: boolean;
 };
 
 type SecForm = {
@@ -409,6 +410,7 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
 export default function FilterConfig() {
   const theme = useTheme();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
 
   // Trapper data
   const [trapper, setTrapper] = useState<Trapper | null>(null);
@@ -421,7 +423,7 @@ export default function FilterConfig() {
 
   // Forms
   const [destForm, setDestForm] = useState<DestForm>({
-    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '', overrideEnabled: false, overridePayload: '',
+    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '', overrideEnabled: false, overridePayload: '', skipTlsVerify: false,
   });
   const [secForm, setSecForm] = useState<SecForm>({
     rateLimit: '', rateLimitWindowMs: '', hmacSecret: '', hmacHeader: '', hmacAlgorithm: 'sha256',
@@ -451,7 +453,7 @@ export default function FilterConfig() {
   useEffect(() => {
     trappersApi.get(id!).then((t) => {
       setTrapper(t);
-      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '' });
+      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '', skipTlsVerify: t.skipTlsVerify ?? false });
       setSecForm({
         rateLimit: t.rateLimit ?? '',
         rateLimitWindowMs: t.rateLimitWindowMs ?? '',
@@ -469,9 +471,14 @@ export default function FilterConfig() {
       if (closeIdx >= 0) setGroupClose(r.length - 1 - closeIdx);
     });
 
-    trappersApi.getLogs(id!, { limit: 1 }).then((r) => {
-      if (r.rows[0]) { try { setLastPayload(JSON.parse(r.rows[0].payload)); } catch { /* ignore */ } }
-    });
+    const payloadFromUrl = searchParams.get('payload');
+    if (payloadFromUrl) {
+      try { setLastPayload(JSON.parse(payloadFromUrl)); } catch { /* ignore */ }
+    } else {
+      trappersApi.getLogs(id!, { limit: 1 }).then((r) => {
+        if (r.rows[0]) { try { setLastPayload(JSON.parse(r.rows[0].payload)); } catch { /* ignore */ } }
+      });
+    }
   }, [id]);
 
 
@@ -541,6 +548,7 @@ export default function FilterConfig() {
       ...destForm,
       overrideEnabled: destForm.overrideEnabled,
       overridePayload: destForm.overrideEnabled && destForm.overridePayload ? destForm.overridePayload : null,
+      skipTlsVerify: destForm.skipTlsVerify,
       rateLimit: secForm.rateLimit === '' ? null : Number(secForm.rateLimit),
       rateLimitWindowMs: secForm.rateLimitWindowMs === '' ? null : Number(secForm.rateLimitWindowMs),
       hmacHeader: secForm.hmacHeader || null,
@@ -815,6 +823,26 @@ export default function FilterConfig() {
                   sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
                 />
               )}
+
+              <Divider sx={{ borderColor: theme.palette.custom.border }} />
+
+              {/* Skip TLS Verification */}
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.12em' }}>
+                    SKIP TLS VERIFICATION
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: theme.palette.custom.muted, mt: 0.25 }}>
+                    Disable certificate validation (self-signed certs)
+                  </Typography>
+                </Box>
+                <Switch
+                  size="small"
+                  checked={destForm.skipTlsVerify}
+                  onChange={(e) => setDestForm({ ...destForm, skipTlsVerify: e.target.checked })}
+                  color="warning"
+                />
+              </Stack>
 
               <Divider sx={{ borderColor: theme.palette.custom.border }} />
 
