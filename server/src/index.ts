@@ -3,10 +3,7 @@ import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import sequelize from './db';
-import './models/Trapper';
-import './models/FilterRule';
-import './models/WebhookLog';
+import { initDb } from './db';
 import trappersRouter from './routes/trappers';
 import logsRouter from './routes/logs';
 import statsRouter from './routes/stats';
@@ -58,12 +55,9 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-async function start() {
-  // Disable FK checks so SQLite can alter tables safely
-  await sequelize.query('PRAGMA foreign_keys = OFF');
-  await sequelize.sync({ alter: true });
-  await sequelize.query('PRAGMA foreign_keys = ON');
-  console.log('Database synced');
+function start() {
+  initDb();
+  console.log('Database initialized');
   app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
 }
 

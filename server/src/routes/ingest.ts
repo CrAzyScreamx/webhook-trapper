@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import Trapper from '../models/Trapper';
-import FilterRule from '../models/FilterRule';
-import WebhookLog from '../models/WebhookLog';
+import { db } from '../db';
+import { trappers, filterRules, webhookLogs, type Operator, type RetryPolicy, type AuthType } from '../schema';
 import { evaluate } from '../services/filterEngine';
 import { emit } from '../sse';
 import { perTrapperRateLimiter } from '../middleware/rateLimiter';
@@ -14,7 +14,7 @@ const router = Router();
 router.use(perTrapperRateLimiter);
 
 router.post('/:trapId', async (req: Request, res: Response) => {
-  const trapper = await Trapper.findOne({ where: { trapId: req.params.trapId } });
+  const trapper = db.select().from(trappers).where(eq(trappers.trapId, req.params.trapId)).get();
   if (!trapper) {
     res.status(404).json({ error: 'Trapper not found' });
     return;
@@ -45,12 +45,13 @@ router.post('/:trapId', async (req: Request, res: Response) => {
   const sourceIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
   const headersJson = JSON.stringify(req.headers);
   const payloadJson = JSON.stringify(payload);
+  const now = new Date().toISOString();
 
   if (trapper.status === 'paused') {
-    const log = await WebhookLog.create({
+    const [log] = db.insert(webhookLogs).values({
       id: uuidv4(),
       trapperId: trapper.id,
-      timestamp: new Date(),
+      timestamp: now,
       sourceIp,
       method: req.method,
       headers: headersJson,
@@ -59,24 +60,24 @@ router.post('/:trapId', async (req: Request, res: Response) => {
       responseCode: null,
       latency: null,
       errorMessage: 'Trapper is paused',
-    });
-    emit(trapper.id, { ...log.toJSON(), trapperName: trapper.name });
+    }).returning().all();
+    emit(trapper.id, { ...log, trapperName: trapper.name });
     res.status(200).json({ status: 'FILTERED', reason: 'paused' });
     return;
   }
 
-  const rules = await FilterRule.findAll({
-    where: { trapperId: trapper.id },
-    order: [['order', 'ASC']],
-  });
+  const rules = db.select().from(filterRules)
+    .where(eq(filterRules.trapperId, trapper.id))
+    .orderBy(filterRules.order)
+    .all() as Array<{ fieldPath: string; operator: Operator; value: string | null; logicOp: 'AND' | 'OR'; groupBefore: number; groupAfter: number }>;
 
   const passed = evaluate(rules, payload);
 
   if (!passed) {
-    const log = await WebhookLog.create({
+    const [log] = db.insert(webhookLogs).values({
       id: uuidv4(),
       trapperId: trapper.id,
-      timestamp: new Date(),
+      timestamp: now,
       sourceIp,
       method: req.method,
       headers: headersJson,
@@ -85,17 +86,17 @@ router.post('/:trapId', async (req: Request, res: Response) => {
       responseCode: null,
       latency: null,
       errorMessage: 'Filter rules did not match',
-    });
-    emit(trapper.id, { ...log.toJSON(), trapperName: trapper.name });
+    }).returning().all();
+    emit(trapper.id, { ...log, trapperName: trapper.name });
     res.status(200).json({ status: 'FILTERED', reason: 'rules' });
     return;
   }
 
   const logId = uuidv4();
-  await WebhookLog.create({
+  db.insert(webhookLogs).values({
     id: logId,
     trapperId: trapper.id,
-    timestamp: new Date(),
+    timestamp: now,
     sourceIp,
     method: req.method,
     headers: headersJson,
@@ -104,18 +105,27 @@ router.post('/:trapId', async (req: Request, res: Response) => {
     responseCode: null,
     latency: null,
     errorMessage: null,
-  });
+  }).run();
+
+  let forwardPayload = payload;
+  if (trapper.overrideEnabled && trapper.overridePayload) {
+    try {
+      forwardPayload = JSON.parse(trapper.overridePayload);
+    } catch {
+      // malformed override JSON — fall back to original payload
+    }
+  }
 
   const jobData: WebhookJobData = {
     logId,
     trapperId: trapper.id,
     destinationUrl: trapper.destinationUrl,
-    authType: trapper.authType,
+    authType: trapper.authType as AuthType,
     authValue: trapper.authValue,
-    payload,
+    payload: forwardPayload,
   };
 
-  await enqueueWebhook(jobData, trapper.retryPolicy);
+  await enqueueWebhook(jobData, trapper.retryPolicy as RetryPolicy);
   res.status(200).json({ status: 'QUEUED' });
 });
 

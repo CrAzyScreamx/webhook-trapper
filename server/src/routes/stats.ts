@@ -1,33 +1,29 @@
 import { Router, Request, Response } from 'express';
-import { Op, fn, col, literal } from 'sequelize';
-import WebhookLog from '../models/WebhookLog';
-import Trapper from '../models/Trapper';
+import { and, eq, gte, isNotNull, count, avg } from 'drizzle-orm';
+import { db } from '../db';
+import { webhookLogs, trappers } from '../schema';
 
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const todayIso = todayStart.toISOString();
 
-  const [totalToday, sent, filtered, avgLatencyResult, activeTrappers] = await Promise.all([
-    WebhookLog.count({ where: { timestamp: { [Op.gte]: todayStart } } }),
-    WebhookLog.count({ where: { timestamp: { [Op.gte]: todayStart }, status: 'SENT' } }),
-    WebhookLog.count({ where: { timestamp: { [Op.gte]: todayStart }, status: 'FILTERED' } }),
-    WebhookLog.findOne({
-      where: { timestamp: { [Op.gte]: todayStart }, latency: { [Op.not]: null } },
-      attributes: [[fn('AVG', col('latency')), 'avg']],
-      raw: true,
-    }),
-    Trapper.count({ where: { status: 'active' } }),
-  ]);
+  const [totalToday, sent, filtered, avgLatencyResult, activeTrappers] = [
+    db.select({ total: count() }).from(webhookLogs).where(gte(webhookLogs.timestamp, todayIso)).get()!.total,
+    db.select({ total: count() }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), eq(webhookLogs.status, 'SENT'))).get()!.total,
+    db.select({ total: count() }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), eq(webhookLogs.status, 'FILTERED'))).get()!.total,
+    db.select({ avg: avg(webhookLogs.latency) }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), isNotNull(webhookLogs.latency))).get(),
+    db.select({ total: count() }).from(trappers).where(eq(trappers.status, 'active')).get()!.total,
+  ];
 
   // Hourly buckets for last 24h
-  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recentLogs = await WebhookLog.findAll({
-    where: { timestamp: { [Op.gte]: since24h } },
-    attributes: ['timestamp', 'status'],
-    raw: true,
-  });
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const recentLogs = db.select({ timestamp: webhookLogs.timestamp, status: webhookLogs.status })
+    .from(webhookLogs)
+    .where(gte(webhookLogs.timestamp, since24h))
+    .all();
 
   const hourlyBuckets: Record<number, { hour: number; sent: number; filtered: number; rejected: number }> = {};
   for (let i = 0; i < 24; i++) {
@@ -44,7 +40,7 @@ router.get('/', async (_req: Request, res: Response) => {
     totalToday,
     sent,
     filtered,
-    avgLatency: (avgLatencyResult as unknown as { avg: number | null })?.avg ?? null,
+    avgLatency: avgLatencyResult?.avg != null ? Number(avgLatencyResult.avg) : null,
     activeTrappers,
     hourly: Object.values(hourlyBuckets),
   });

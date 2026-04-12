@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { Op } from 'sequelize';
-import WebhookLog from '../models/WebhookLog';
-import Trapper from '../models/Trapper';
+import { eq, and, like, desc, count } from 'drizzle-orm';
+import { db } from '../db';
+import { webhookLogs, trappers } from '../schema';
 
 const router = Router();
 
@@ -12,18 +12,21 @@ router.get('/trappers/:id/logs', async (req: Request, res: Response) => {
   const status = req.query.status as string | undefined;
   const search = req.query.search as string | undefined;
 
-  const where: Record<string, unknown> = { trapperId: req.params.id };
-  if (status) where.status = status;
-  if (search) where.payload = { [Op.like]: `%${search}%` };
+  const whereClause = and(
+    eq(webhookLogs.trapperId, req.params.id),
+    status ? eq(webhookLogs.status, status) : undefined,
+    search ? like(webhookLogs.payload, `%${search}%`) : undefined,
+  );
 
-  const { count, rows } = await WebhookLog.findAndCountAll({
-    where,
-    order: [['timestamp', 'DESC']],
-    limit,
-    offset: (page - 1) * limit,
-  });
+  const [{ total }] = db.select({ total: count() }).from(webhookLogs).where(whereClause).all();
+  const rows = db.select().from(webhookLogs)
+    .where(whereClause)
+    .orderBy(desc(webhookLogs.timestamp))
+    .limit(limit)
+    .offset((page - 1) * limit)
+    .all();
 
-  res.json({ total: count, page, limit, rows });
+  res.json({ total, page, limit, rows });
 });
 
 // GET /api/logs — all trappers
@@ -31,22 +34,21 @@ router.get('/', async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
 
-  const { count, rows } = await WebhookLog.findAndCountAll({
-    order: [['timestamp', 'DESC']],
-    limit,
-    offset: (page - 1) * limit,
-    include: [{ model: Trapper, attributes: ['name', 'trapId'] }],
-  });
+  const [{ total }] = db.select({ total: count() }).from(webhookLogs).all();
+  const rows = db.select({
+    log: webhookLogs,
+    trapperName: trappers.name,
+  })
+    .from(webhookLogs)
+    .leftJoin(trappers, eq(webhookLogs.trapperId, trappers.id))
+    .orderBy(desc(webhookLogs.timestamp))
+    .limit(limit)
+    .offset((page - 1) * limit)
+    .all();
 
-  const enriched = rows.map((log) => {
-    const json = log.toJSON();
-    return {
-      ...json,
-      trapperName: (log as any).Trapper?.name,
-    };
-  });
+  const enriched = rows.map(({ log, trapperName }) => ({ ...log, trapperName }));
 
-  res.json({ total: count, page, limit, rows: enriched });
+  res.json({ total, page, limit, rows: enriched });
 });
 
 export default router;

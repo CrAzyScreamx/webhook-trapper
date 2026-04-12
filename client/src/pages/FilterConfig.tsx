@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import {
   Box, Typography, Paper, Stack, Button, TextField, Select, MenuItem,
   IconButton, Alert, FormControl, ToggleButton, ToggleButtonGroup, Chip,
-  Collapse, Divider, InputLabel,
+  Collapse, Divider, InputLabel, Switch,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { alpha } from '@mui/material/styles';
@@ -30,6 +30,8 @@ type DestForm = {
   retryPolicy: string;
   authType: string;
   authValue: string;
+  overrideEnabled: boolean;
+  overridePayload: string;
 };
 
 type SecForm = {
@@ -414,7 +416,7 @@ export default function FilterConfig() {
 
   // Forms
   const [destForm, setDestForm] = useState<DestForm>({
-    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '',
+    destinationUrl: '', retryPolicy: 'none', authType: 'none', authValue: '', overrideEnabled: false, overridePayload: '',
   });
   const [secForm, setSecForm] = useState<SecForm>({
     rateLimit: '', rateLimitWindowMs: '', hmacSecret: '', hmacHeader: '', hmacAlgorithm: 'sha256',
@@ -444,7 +446,7 @@ export default function FilterConfig() {
   useEffect(() => {
     trappersApi.get(id!).then((t) => {
       setTrapper(t);
-      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '' });
+      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '' });
       setSecForm({
         rateLimit: t.rateLimit ?? '',
         rateLimitWindowMs: t.rateLimitWindowMs ?? '',
@@ -532,6 +534,8 @@ export default function FilterConfig() {
     await trappersApi.setRules(id!, rules.map((r, i) => ({ ...r, order: i })));
     await trappersApi.update(id!, {
       ...destForm,
+      overrideEnabled: destForm.overrideEnabled,
+      overridePayload: destForm.overrideEnabled && destForm.overridePayload ? destForm.overridePayload : null,
       rateLimit: secForm.rateLimit === '' ? null : Number(secForm.rateLimit),
       rateLimitWindowMs: secForm.rateLimitWindowMs === '' ? null : Number(secForm.rateLimitWindowMs),
       hmacHeader: secForm.hmacHeader || null,
@@ -804,6 +808,56 @@ export default function FilterConfig() {
                   InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
                   sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
                 />
+              )}
+
+              <Divider sx={{ borderColor: theme.palette.custom.border }} />
+
+              {/* Destination Override */}
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.12em' }}>
+                    PAYLOAD OVERRIDE
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: theme.palette.custom.muted, mt: 0.25 }}>
+                    Send a static JSON instead of the filtered payload
+                  </Typography>
+                </Box>
+                <Switch
+                  size="small"
+                  checked={destForm.overrideEnabled}
+                  onChange={(e) => setDestForm({ ...destForm, overrideEnabled: e.target.checked })}
+                  color="primary"
+                />
+              </Stack>
+
+              {destForm.overrideEnabled && (
+                <Box>
+                  <Typography sx={{ fontSize: '0.58rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.1em', mb: 0.5 }}>
+                    OVERRIDE JSON
+                  </Typography>
+                  <TextField
+                    fullWidth multiline minRows={4}
+                    placeholder={'{\n  "event": "override",\n  "source": "trapper"\n}'}
+                    value={destForm.overridePayload}
+                    onChange={(e) => setDestForm({ ...destForm, overridePayload: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontFamily: MONO, fontSize: '0.72rem', color: 'text.primary',
+                        bgcolor: theme.palette.custom.codeBg, borderRadius: 1,
+                        '& fieldset': { borderColor: theme.palette.custom.border },
+                        '&:hover fieldset': { borderColor: theme.palette.custom.hoverBorder },
+                      },
+                    }}
+                  />
+                  {destForm.overridePayload && (() => {
+                    try { JSON.parse(destForm.overridePayload); return null; }
+                    catch { return (
+                      <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>
+                        Invalid JSON
+                      </Typography>
+                    ); }
+                  })()}
+                </Box>
               )}
 
             </Stack>

@@ -5,6 +5,10 @@ import { requireJwt } from '../middleware/jwtAuth';
 
 const router = Router();
 
+// Hash the plain-text ADMIN_PASSWORD once at startup so Docker only needs a plain password in .env
+let adminPasswordHash: string;
+bcrypt.hash(process.env.ADMIN_PASSWORD!, 10).then((h) => { adminPasswordHash = h; });
+
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body;
 
@@ -18,7 +22,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const valid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH!);
+  const valid = await bcrypt.compare(password, adminPasswordHash);
   if (!valid) {
     res.status(401).json({ error: 'Invalid credentials' });
     return;

@@ -7,3 +7,5 @@ server/node_modules
 data/trapper.db
 stitch
 tasks.md
+data/trapper.db-shm
+data/trapper.db-wal

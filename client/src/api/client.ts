@@ -36,6 +36,8 @@ export interface Trapper {
   hmacConfigured: boolean;
   hmacHeader: string | null;
   hmacAlgorithm: 'sha256' | 'sha1';
+  overrideEnabled: boolean;
+  overridePayload: string | null;
 }
 
 export interface FilterRule {

@@ -1,8 +1,10 @@
 import { Worker, Job } from 'bullmq';
+import { eq } from 'drizzle-orm';
 import redisClient from './connection';
 import { WebhookJobData } from './webhookQueue';
 import { send } from '../services/forwarder';
-import WebhookLog from '../models/WebhookLog';
+import { db } from '../db';
+import { webhookLogs } from '../schema';
 import { emit } from '../sse';
 
 const worker = new Worker<WebhookJobData>(
@@ -12,15 +14,19 @@ const worker = new Worker<WebhookJobData>(
 
     const result = await send(destinationUrl, payload, authType, authValue);
 
-    const log = await WebhookLog.findByPk(logId);
+    const log = db.select().from(webhookLogs).where(eq(webhookLogs.id, logId)).get();
     if (log) {
-      await log.update({
-        status: result.success ? 'SENT' : 'REJECTED',
-        responseCode: result.responseCode,
-        latency: result.latency,
-        errorMessage: result.errorMessage,
-      });
-      emit(log.trapperId, { ...log.toJSON() });
+      const [updated] = db.update(webhookLogs)
+        .set({
+          status: result.success ? 'SENT' : 'REJECTED',
+          responseCode: result.responseCode,
+          latency: result.latency,
+          errorMessage: result.errorMessage,
+        })
+        .where(eq(webhookLogs.id, logId))
+        .returning()
+        .all();
+      emit(updated.trapperId, { ...updated });
     }
   },
   { connection: redisClient }
@@ -29,15 +35,19 @@ const worker = new Worker<WebhookJobData>(
 worker.on('failed', async (job: Job<WebhookJobData> | undefined, err: Error) => {
   if (!job) return;
 
-  const log = await WebhookLog.findByPk(job.data.logId);
+  const log = db.select().from(webhookLogs).where(eq(webhookLogs.id, job.data.logId)).get();
   if (log) {
-    await log.update({
-      status: 'REJECTED',
-      responseCode: null,
-      latency: null,
-      errorMessage: err.message || 'All retries exhausted',
-    });
-    emit(log.trapperId, { ...log.toJSON() });
+    const [updated] = db.update(webhookLogs)
+      .set({
+        status: 'REJECTED',
+        responseCode: null,
+        latency: null,
+        errorMessage: err.message || 'All retries exhausted',
+      })
+      .where(eq(webhookLogs.id, job.data.logId))
+      .returning()
+      .all();
+    emit(updated.trapperId, { ...updated });
   }
 });
 
