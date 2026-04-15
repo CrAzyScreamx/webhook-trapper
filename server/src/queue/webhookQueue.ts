@@ -2,6 +2,17 @@ import { Queue } from 'bullmq';
 import redisClient from './connection';
 import { AuthType, RetryPolicy } from '../models/Trapper';
 
+export interface FallbackDestination {
+  destinationId: string;
+  destinationLabel: string;
+  destinationUrl: string;
+  authType: AuthType;
+  authValue: string | null;
+  skipTlsVerify: boolean;
+  customAuthHeader: string | null;
+  retryPolicy: RetryPolicy;
+}
+
 export interface WebhookJobData {
   logId: string;
   trapperId: string;
@@ -11,6 +22,9 @@ export interface WebhookJobData {
   payload: unknown;
   skipTlsVerify: boolean;
   customAuthHeader: string | null;
+  destinationId: string | null;
+  /** Remaining destinations to try if this one fails (fallback mode only) */
+  fallbackChain: FallbackDestination[];
 }
 
 export const webhookQueue = new Queue('webhook-forward', { connection: redisClient });

@@ -3,11 +3,11 @@ import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
-import { trappers, filterRules, webhookLogs, type Operator, type RetryPolicy, type AuthType } from '../schema';
+import { trappers, filterRules, webhookLogs, destinations, type Operator, type RetryPolicy, type AuthType, type DeliveryMode } from '../schema';
 import { evaluate } from '../services/filterEngine';
 import { emit } from '../sse';
 import { perTrapperRateLimiter } from '../middleware/rateLimiter';
-import { enqueueWebhook, WebhookJobData } from '../queue/webhookQueue';
+import { enqueueWebhook, WebhookJobData, FallbackDestination } from '../queue/webhookQueue';
 import { applyTemplate } from '../services/templateEngine';
 
 const router = Router();
@@ -99,21 +99,6 @@ router.post('/:trapId', async (req: Request, res: Response) => {
     return;
   }
 
-  const logId = uuidv4();
-  db.insert(webhookLogs).values({
-    id: logId,
-    trapperId: trapper.id,
-    timestamp: now,
-    sourceIp,
-    method: req.method,
-    headers: headersJson,
-    payload: payloadJson,
-    status: 'QUEUED',
-    responseCode: null,
-    latency: null,
-    errorMessage: null,
-  }).run();
-
   let forwardPayload = payload;
   if (trapper.overrideEnabled && trapper.overridePayload) {
     try {
@@ -124,18 +109,135 @@ router.post('/:trapId', async (req: Request, res: Response) => {
     }
   }
 
-  const jobData: WebhookJobData = {
-    logId,
-    trapperId: trapper.id,
-    destinationUrl: trapper.destinationUrl,
-    authType: trapper.authType as AuthType,
-    authValue: trapper.authValue,
-    payload: forwardPayload,
-    skipTlsVerify: !!trapper.skipTlsVerify,
-    customAuthHeader: trapper.customAuthHeader ?? null,
-  };
+  const dests = db.select().from(destinations).where(eq(destinations.trapperId, trapper.id)).all();
+  const deliveryMode = (trapper.deliveryMode ?? 'broadcast') as DeliveryMode;
 
-  await enqueueWebhook(jobData, trapper.retryPolicy as RetryPolicy);
+  if (dests.length > 0) {
+    const parentLogId = uuidv4();
+
+    if (deliveryMode === 'broadcast') {
+      // Fire to all destinations simultaneously — one log + one job per destination
+      for (const dest of dests) {
+        const logId = uuidv4();
+        db.insert(webhookLogs).values({
+          id: logId,
+          trapperId: trapper.id,
+          timestamp: now,
+          sourceIp,
+          method: req.method,
+          headers: headersJson,
+          payload: payloadJson,
+          status: 'QUEUED',
+          responseCode: null,
+          latency: null,
+          errorMessage: null,
+          parentLogId,
+          destinationId: dest.id,
+          destinationLabel: dest.label,
+        }).run();
+
+        await enqueueWebhook(
+          {
+            logId,
+            trapperId: trapper.id,
+            destinationUrl: dest.url,
+            authType: dest.authType as AuthType,
+            authValue: dest.authValue,
+            payload: forwardPayload,
+            skipTlsVerify: !!dest.skipTlsVerify,
+            customAuthHeader: dest.customAuthHeader ?? null,
+            destinationId: dest.id,
+            fallbackChain: [],
+          },
+          dest.retryPolicy as RetryPolicy,
+        );
+      }
+    } else {
+      // Fallback mode — try first destination; on failure the worker tries the next
+      const [first, ...rest] = dests;
+
+      const logId = uuidv4();
+      db.insert(webhookLogs).values({
+        id: logId,
+        trapperId: trapper.id,
+        timestamp: now,
+        sourceIp,
+        method: req.method,
+        headers: headersJson,
+        payload: payloadJson,
+        status: 'QUEUED',
+        responseCode: null,
+        latency: null,
+        errorMessage: null,
+        parentLogId,
+        destinationId: first.id,
+        destinationLabel: first.label,
+      }).run();
+
+      const fallbackChain: FallbackDestination[] = rest.map((d) => ({
+        destinationId: d.id,
+        destinationLabel: d.label,
+        destinationUrl: d.url,
+        authType: d.authType as AuthType,
+        authValue: d.authValue,
+        skipTlsVerify: !!d.skipTlsVerify,
+        customAuthHeader: d.customAuthHeader ?? null,
+        retryPolicy: d.retryPolicy as RetryPolicy,
+      }));
+
+      await enqueueWebhook(
+        {
+          logId,
+          trapperId: trapper.id,
+          destinationUrl: first.url,
+          authType: first.authType as AuthType,
+          authValue: first.authValue,
+          payload: forwardPayload,
+          skipTlsVerify: !!first.skipTlsVerify,
+          customAuthHeader: first.customAuthHeader ?? null,
+          destinationId: first.id,
+          fallbackChain,
+        },
+        first.retryPolicy as RetryPolicy,
+      );
+    }
+  } else {
+    // No destinations configured — fall back to the trapper's single destination URL
+    const logId = uuidv4();
+    db.insert(webhookLogs).values({
+      id: logId,
+      trapperId: trapper.id,
+      timestamp: now,
+      sourceIp,
+      method: req.method,
+      headers: headersJson,
+      payload: payloadJson,
+      status: 'QUEUED',
+      responseCode: null,
+      latency: null,
+      errorMessage: null,
+      parentLogId: null,
+      destinationId: null,
+      destinationLabel: null,
+    }).run();
+
+    await enqueueWebhook(
+      {
+        logId,
+        trapperId: trapper.id,
+        destinationUrl: trapper.destinationUrl,
+        authType: trapper.authType as AuthType,
+        authValue: trapper.authValue,
+        payload: forwardPayload,
+        skipTlsVerify: !!trapper.skipTlsVerify,
+        customAuthHeader: trapper.customAuthHeader ?? null,
+        destinationId: null,
+        fallbackChain: [],
+      },
+      trapper.retryPolicy as RetryPolicy,
+    );
+  }
+
   res.status(200).json({ status: 'QUEUED' });
   } catch (err) {
     console.error('[ingest] unhandled error:', err);

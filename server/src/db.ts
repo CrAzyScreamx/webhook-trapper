@@ -59,6 +59,22 @@ export function initDb(): void {
       responseCode INTEGER,
       latency INTEGER,
       errorMessage TEXT,
+      parentLogId TEXT,
+      destinationId TEXT,
+      destinationLabel TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS destinations (
+      id TEXT PRIMARY KEY,
+      trapperId TEXT NOT NULL,
+      label TEXT NOT NULL,
+      url TEXT NOT NULL,
+      authType TEXT NOT NULL DEFAULT 'none',
+      authValue TEXT,
+      customAuthHeader TEXT,
+      skipTlsVerify INTEGER NOT NULL DEFAULT 0,
+      retryPolicy TEXT NOT NULL DEFAULT 'none',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -68,6 +84,10 @@ export function initDb(): void {
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN overridePayload TEXT`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN skipTlsVerify INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN customAuthHeader TEXT`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN parentLogId TEXT`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN destinationId TEXT`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN destinationLabel TEXT`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN deliveryMode TEXT NOT NULL DEFAULT 'broadcast'`); } catch { /* already exists */ }
 }
 
 export default db;

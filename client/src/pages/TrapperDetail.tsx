@@ -33,6 +33,7 @@ export default function TrapperDetail() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const limit = 10;
 
+
   const statusChip = (status: string) => {
     const map: Record<string, { label: string; color: string; bg: string }> = {
       SENT:     { label: 'SENT',      color: theme.palette.secondary.main, bg: alpha(theme.palette.secondary.main, 0.09) },
@@ -190,6 +191,7 @@ export default function TrapperDetail() {
               <TableCell width={36} />
               <TableCell sx={{ color: theme.palette.custom.muted, fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>TIMESTAMP</TableCell>
               <TableCell sx={{ color: theme.palette.custom.muted, fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>MESSAGE SNIPPET</TableCell>
+              <TableCell sx={{ color: theme.palette.custom.muted, fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>DESTINATION</TableCell>
               <TableCell sx={{ color: theme.palette.custom.muted, fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>STATUS</TableCell>
             </TableRow>
           </TableHead>
@@ -215,10 +217,15 @@ export default function TrapperDetail() {
                       {log.errorMessage ?? `${log.method} from ${log.sourceIp}`}
                     </Typography>
                   </TableCell>
+                  <TableCell>
+                    <Typography sx={{ fontSize: '0.65rem', fontFamily: 'JetBrains Mono, monospace', color: theme.palette.custom.muted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {log.destinationLabel ?? '—'}
+                    </Typography>
+                  </TableCell>
                   <TableCell>{statusChip(log.status)}</TableCell>
                 </TableRow>
                 <TableRow sx={{ '& .MuiTableCell-root': { p: 0, borderColor: theme.palette.custom.border } }}>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <Collapse in={expanded === log.id} unmountOnExit>
                       <Box sx={{ p: 2, bgcolor: theme.palette.custom.codeBg, borderTop: `1px solid ${theme.palette.custom.border}` }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -260,7 +267,7 @@ export default function TrapperDetail() {
             ))}
             {logs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} sx={{ borderColor: theme.palette.custom.border, py: 4, textAlign: 'center' }}>
+                <TableCell colSpan={5} sx={{ borderColor: theme.palette.custom.border, py: 4, textAlign: 'center' }}>
                   <Typography sx={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: theme.palette.custom.muted }}>
                     No execution records yet
                   </Typography>

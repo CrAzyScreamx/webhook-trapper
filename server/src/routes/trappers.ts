@@ -2,13 +2,16 @@ import { Router, Request, Response } from 'express';
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
-import { trappers, filterRules, webhookLogs, type Trapper } from '../schema';
+import { trappers, filterRules, webhookLogs, destinations, type Trapper } from '../schema';
 import { evaluate } from '../services/filterEngine';
 import { send } from '../services/forwarder';
 import { applyTemplate } from '../services/templateEngine';
 import { invalidateTrapperLimiter } from '../middleware/rateLimiter';
+import destinationsRouter from './destinations';
 
 const router = Router();
+
+router.use('/:id/destinations', destinationsRouter);
 
 function sanitizeTrapper(trapper: Trapper) {
   const { hmacSecret, ...rest } = trapper;
@@ -67,9 +70,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const trapper = db.select().from(trappers).where(eq(trappers.id, req.params.id)).get();
   if (!trapper) { res.status(404).json({ error: 'Not found' }); return; }
-  const { name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify, customAuthHeader } = req.body;
+  const { name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify, customAuthHeader, deliveryMode } = req.body;
   const [updated] = db.update(trappers)
-    .set({ name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled: overrideEnabled ? 1 : 0, overridePayload: overridePayload ?? null, skipTlsVerify: skipTlsVerify ? 1 : 0, customAuthHeader: customAuthHeader ?? null, updatedAt: new Date().toISOString() })
+    .set({ name, description, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled: overrideEnabled ? 1 : 0, overridePayload: overridePayload ?? null, skipTlsVerify: skipTlsVerify ? 1 : 0, customAuthHeader: customAuthHeader ?? null, deliveryMode: deliveryMode ?? 'broadcast', updatedAt: new Date().toISOString() })
     .where(eq(trappers.id, req.params.id))
     .returning()
     .all();
@@ -146,7 +149,8 @@ router.post('/:id/test', async (req: Request, res: Response) => {
     const parsedRules = (rules ?? []) as Array<{ fieldPath: string; operator: import('../schema').Operator; value: string | null; logicOp?: 'AND' | 'OR'; groupBefore?: number; groupAfter?: number }>;
     const filterPassed = evaluate(parsedRules, payload);
 
-    const result: { filterPassed: boolean; destination?: { status: number | null; body: unknown; error?: string } } = { filterPassed };
+    type DestResult = { label: string; url: string; status: number | null; error?: string };
+    const result: { filterPassed: boolean; destinations: DestResult[] } = { filterPassed, destinations: [] };
 
     if (filterPassed) {
       let forwardPayload = payload;
@@ -157,19 +161,26 @@ router.post('/:id/test', async (req: Request, res: Response) => {
         } catch { /* malformed override — fall back */ }
       }
 
-      const forward = await send(
-        trapper.destinationUrl,
-        forwardPayload,
-        trapper.authType as import('../schema').AuthType,
-        trapper.authValue,
-        !!trapper.skipTlsVerify,
-        trapper.customAuthHeader ?? null,
-      );
-      result.destination = {
-        status: forward.responseCode,
-        body: null,
-        ...(forward.errorMessage ? { error: forward.errorMessage } : {}),
-      };
+      const dests = db.select().from(destinations).where(eq(destinations.trapperId, trapper.id)).all();
+
+      if (dests.length > 0) {
+        const sends = dests.map((d) =>
+          send(d.url, forwardPayload, d.authType as import('../schema').AuthType, d.authValue, !!d.skipTlsVerify, d.customAuthHeader ?? null)
+            .then((fwd) => ({ label: d.label, url: d.url, status: fwd.responseCode, ...(fwd.errorMessage ? { error: fwd.errorMessage } : {}) } as DestResult))
+            .catch((err: unknown) => ({ label: d.label, url: d.url, status: null, error: String(err) } as DestResult))
+        );
+        result.destinations = await Promise.all(sends);
+      } else {
+        const forward = await send(
+          trapper.destinationUrl,
+          forwardPayload,
+          trapper.authType as import('../schema').AuthType,
+          trapper.authValue,
+          !!trapper.skipTlsVerify,
+          trapper.customAuthHeader ?? null,
+        );
+        result.destinations = [{ label: 'Default', url: trapper.destinationUrl, status: forward.responseCode, ...(forward.errorMessage ? { error: forward.errorMessage } : {}) }];
+      }
     }
 
     res.json(result);

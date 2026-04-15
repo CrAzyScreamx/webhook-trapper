@@ -14,7 +14,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import { trappersApi, Trapper, FilterRule } from '../api/client';
+import EditIcon from '@mui/icons-material/Edit';
+import { trappersApi, destinationsApi, Trapper, FilterRule, Destination } from '../api/client';
 import JsonTree from '../components/JsonTree';
 import Breadcrumb from '../components/Breadcrumb';
 import {
@@ -44,9 +45,10 @@ type SecForm = {
   hmacAlgorithm: 'sha256' | 'sha1';
 };
 
+type DestResult = { label: string; url: string; status: number | null; error?: string };
 type TestResult = {
   filterPassed: boolean;
-  destination?: { status: number; body: unknown; error?: string };
+  destinations: DestResult[];
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -345,15 +347,7 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
   const theme = useTheme();
   const passed = result.filterPassed;
   const passColor = passed ? theme.palette.secondary.main : theme.palette.error.main;
-  const destStatus = result.destination?.status;
-  const destOk = destStatus && destStatus >= 200 && destStatus < 300;
-
-  // Pre-compute body as string so `unknown` never flows into JSX children
-  const bodyText: string | null = result.destination?.body != null
-    ? (typeof result.destination.body === 'string'
-        ? result.destination.body
-        : JSON.stringify(result.destination.body, null, 2))
-    : null;
+  const failedDests = result.destinations.filter((d) => !d.status || d.status < 200 || d.status >= 300);
 
   return (
     <Paper sx={{ mb: 2, border: `1px solid ${alpha(passColor, 0.27)}`, overflow: 'hidden' }}>
@@ -363,44 +357,49 @@ function TestResultPanel({ result, expanded, onToggle }: { result: TestResult; e
           <Typography sx={{ fontSize: '0.75rem', fontFamily: MONO, color: passColor, fontWeight: 700, letterSpacing: '0.08em' }}>
             FILTER: {passed ? 'PASSED' : 'BLOCKED'}
           </Typography>
-          {result.destination && (
-            <Typography sx={{
-              fontSize: '0.75rem', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.08em',
-              color: destOk ? theme.palette.secondary.main : theme.palette.error.main,
-            }}>
-              DEST: {destStatus === 0 ? 'ERROR' : `${destStatus}`}
+          {passed && failedDests.length > 0 && (
+            <Typography sx={{ fontSize: '0.75rem', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.08em', color: theme.palette.error.main }}>
+              — {failedDests.length}/{result.destinations.length} URL{failedDests.length > 1 ? 's' : ''} FAILED
             </Typography>
           )}
         </Stack>
-        <IconButton size="small" onClick={onToggle} sx={{ color: theme.palette.custom.muted }}>
-          {expanded ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
-        </IconButton>
+        {passed && result.destinations.length > 0 && (
+          <IconButton size="small" onClick={onToggle} sx={{ color: theme.palette.custom.muted }}>
+            {expanded ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
+          </IconButton>
+        )}
       </Stack>
 
-      <Collapse in={expanded}>
-        <Box sx={{ p: 2, bgcolor: theme.palette.custom.codeBg, borderTop: `1px solid ${theme.palette.custom.border}` }}>
-          {result.destination?.error && (
-            <Typography sx={{ fontSize: '0.7rem', fontFamily: MONO, color: 'error.main', mb: 1 }}>
-              ✕ {result.destination.error}
-            </Typography>
-          )}
-          {bodyText != null && (
-            <>
-              <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.1em', mb: 0.5 }}>
-                DESTINATION RESPONSE
-              </Typography>
-              <Box sx={{
-                p: 1.5, borderRadius: 1, border: `1px solid ${theme.palette.custom.border}`,
-                bgcolor: theme.palette.custom.inputBg, maxHeight: 200, overflow: 'auto',
-              }}>
-                <Typography sx={{ fontSize: '0.72rem', fontFamily: MONO, color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                  {bodyText}
-                </Typography>
-              </Box>
-            </>
-          )}
-        </Box>
-      </Collapse>
+      {passed && result.destinations.length > 0 && (
+        <Collapse in={expanded}>
+          <Stack gap={0} sx={{ borderTop: `1px solid ${theme.palette.custom.border}` }}>
+            {result.destinations.map((d, i) => {
+              const ok = d.status != null && d.status >= 200 && d.status < 300;
+              const rowColor = ok ? theme.palette.secondary.main : theme.palette.error.main;
+              return (
+                <Stack key={i} direction="row" alignItems="flex-start" gap={1.5}
+                  sx={{ px: 2, py: 1.25, bgcolor: theme.palette.custom.codeBg, borderBottom: i < result.destinations.length - 1 ? `1px solid ${theme.palette.custom.border}` : 'none' }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: rowColor, mt: 0.6, flexShrink: 0 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+                      <Typography sx={{ fontSize: '0.72rem', fontFamily: MONO, fontWeight: 700, color: rowColor }}>
+                        {d.status === null || d.status === 0 ? 'ERROR' : String(d.status)}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: 'text.primary' }}>{d.label}</Typography>
+                      <Typography sx={{ fontSize: '0.68rem', fontFamily: MONO, color: theme.palette.custom.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.url}</Typography>
+                    </Stack>
+                    {d.error && (
+                      <Typography sx={{ fontSize: '0.68rem', fontFamily: MONO, color: 'error.main', mt: 0.25 }}>
+                        {d.error}
+                      </Typography>
+                    )}
+                  </Box>
+                </Stack>
+              );
+            })}
+          </Stack>
+        </Collapse>
+      )}
     </Paper>
   );
 }
@@ -430,6 +429,15 @@ export default function FilterConfig() {
     rateLimit: '', rateLimitWindowMs: '', hmacSecret: '', hmacHeader: '', hmacAlgorithm: 'sha256',
   });
 
+  // Destinations
+  const [dests, setDests] = useState<Destination[]>([]);
+  const [deliveryMode, setDeliveryMode] = useState<'broadcast' | 'fallback'>('broadcast');
+  const [showDestForm, setShowDestForm] = useState(false);
+  const [newDest, setNewDest] = useState({ label: '', url: '', authType: 'none', authValue: '', customAuthHeader: 'Authorization', skipTlsVerify: false, retryPolicy: 'none' });
+  const [newDestErrors, setNewDestErrors] = useState({ label: false, url: false });
+  const [editingDestId, setEditingDestId] = useState<string | null>(null);
+  const [editDest, setEditDest] = useState({ label: '', url: '', authType: 'none', authValue: '', customAuthHeader: 'Authorization', skipTlsVerify: false, retryPolicy: 'none' });
+
   // UI: section expansion
   const [rulesExpanded, setRulesExpanded] = useState(true);
   const [destExpanded, setDestExpanded] = useState(false);
@@ -452,9 +460,10 @@ export default function FilterConfig() {
   // ─── Data Loading ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    trappersApi.get(id!).then((t) => {
+    Promise.all([trappersApi.get(id!), destinationsApi.list(id!)]).then(([t, d]) => {
       setTrapper(t);
-      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', customAuthHeader: t.customAuthHeader ?? 'Authorization', overrideEnabled: t.overrideEnabled ?? false, overridePayload: t.overridePayload ?? '', skipTlsVerify: t.skipTlsVerify ?? false });
+      setDeliveryMode(t.deliveryMode ?? 'broadcast');
+      setDestForm({ destinationUrl: t.destinationUrl, retryPolicy: t.retryPolicy, authType: t.authType, authValue: t.authValue ?? '', customAuthHeader: t.customAuthHeader ?? 'Authorization', overrideEnabled: !!t.overrideEnabled, overridePayload: t.overridePayload ?? '', skipTlsVerify: !!t.skipTlsVerify });
       setSecForm({
         rateLimit: t.rateLimit ?? '',
         rateLimitWindowMs: t.rateLimitWindowMs ?? '',
@@ -462,6 +471,7 @@ export default function FilterConfig() {
         hmacHeader: t.hmacHeader ?? '',
         hmacAlgorithm: t.hmacAlgorithm ?? 'sha256',
       });
+      setDests(d);
     });
 
     trappersApi.getRules(id!).then((r) => {
@@ -481,6 +491,50 @@ export default function FilterConfig() {
       });
     }
   }, [id]);
+
+  const handleAddDest = async () => {
+    const errors = { label: !newDest.label.trim(), url: !newDest.url.trim() };
+    if (errors.label || errors.url) { setNewDestErrors(errors); return; }
+    await destinationsApi.create(id!, {
+      label: newDest.label,
+      url: newDest.url,
+      authType: newDest.authType as Destination['authType'],
+      authValue: newDest.authValue || null,
+      customAuthHeader: newDest.authType === 'custom' ? (newDest.customAuthHeader || 'Authorization') : null,
+      skipTlsVerify: newDest.skipTlsVerify,
+      retryPolicy: newDest.retryPolicy as Destination['retryPolicy'],
+    });
+    setNewDest({ label: '', url: '', authType: 'none', authValue: '', customAuthHeader: 'Authorization', skipTlsVerify: false, retryPolicy: 'none' });
+    setNewDestErrors({ label: false, url: false });
+    setShowDestForm(false);
+    destinationsApi.list(id!).then(setDests);
+  };
+
+  const handleDeleteDest = async (destId: string) => {
+    await destinationsApi.delete(id!, destId);
+    destinationsApi.list(id!).then(setDests);
+  };
+
+  const handleEditStart = (dest: Destination) => {
+    setEditingDestId(dest.id);
+    setEditDest({ label: dest.label, url: dest.url, authType: dest.authType, authValue: dest.authValue ?? '', customAuthHeader: dest.customAuthHeader ?? 'Authorization', skipTlsVerify: !!dest.skipTlsVerify, retryPolicy: dest.retryPolicy });
+    setShowDestForm(false);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingDestId) return;
+    await destinationsApi.update(id!, editingDestId, {
+      label: editDest.label,
+      url: editDest.url,
+      authType: editDest.authType as Destination['authType'],
+      authValue: editDest.authValue || null,
+      customAuthHeader: editDest.authType === 'custom' ? (editDest.customAuthHeader || 'Authorization') : null,
+      skipTlsVerify: editDest.skipTlsVerify,
+      retryPolicy: editDest.retryPolicy as Destination['retryPolicy'],
+    });
+    setEditingDestId(null);
+    destinationsApi.list(id!).then(setDests);
+  };
 
 
   // ─── Expression Sync ───────────────────────────────────────────────────────
@@ -547,6 +601,7 @@ export default function FilterConfig() {
     await trappersApi.setRules(id!, rules.map((r, i) => ({ ...r, order: i })));
     await trappersApi.update(id!, {
       ...destForm,
+      deliveryMode,
       customAuthHeader: destForm.authType === 'custom' ? (destForm.customAuthHeader || 'Authorization') : null,
       overrideEnabled: destForm.overrideEnabled,
       overridePayload: destForm.overrideEnabled && destForm.overridePayload ? destForm.overridePayload : null,
@@ -569,7 +624,7 @@ export default function FilterConfig() {
       setTestResult(result);
       setTestExpanded(false);
     } catch {
-      setTestResult({ filterPassed: false, destination: { status: 0, body: null, error: 'Failed to run test' } });
+      setTestResult({ filterPassed: false, destinations: [] });
     } finally {
       setTestLoading(false);
     }
@@ -763,120 +818,227 @@ export default function FilterConfig() {
       </Paper>
 
 
-      {/* 02 — Destination Endpoint */}
+      {/* 02 — Destinations (merged: endpoint config + fan-out/fallback) */}
       <Paper sx={{ mb: 2, border: `1px solid ${theme.palette.custom.border}` }}>
-        <SectionHeader label="02. DESTINATION ENDPOINT" expanded={destExpanded} onToggle={() => setDestExpanded((v) => !v)} />
-
+        <SectionHeader
+          label={`02. DESTINATIONS${dests.length > 0 ? ` (${dests.length})` : ''}`}
+          expanded={destExpanded}
+          onToggle={() => setDestExpanded((v) => !v)}
+        />
         <Collapse in={destExpanded}>
           <Box sx={{ p: 2.5 }}>
             <Stack gap={2}>
 
-              <TextField
-                label="Destination URL" fullWidth size="small"
-                value={destForm.destinationUrl}
-                onChange={(e) => setDestForm({ ...destForm, destinationUrl: e.target.value })}
-                placeholder="https://example.com/webhook"
-                InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
-                InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
-                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-              />
+              {/* ── Delivery Mode ───────────────────────────────────── */}
+              <Box>
+                <Typography sx={{ fontSize: '0.58rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.1em', mb: 1 }}>
+                  DELIVERY MODE
+                </Typography>
+                <Stack direction="row" gap={1.5}>
+                  {(['broadcast', 'fallback'] as const).map((mode) => {
+                    const active = deliveryMode === mode;
+                    const label = mode === 'broadcast' ? 'Broadcast — send to all' : 'Fallback — try in order';
+                    const sub = mode === 'broadcast' ? 'All destinations receive every webhook simultaneously' : 'Try first destination; on failure move to next';
+                    return (
+                      <Box key={mode} onClick={() => setDeliveryMode(mode)} sx={{
+                        flex: 1, p: 1.5, borderRadius: 1, cursor: 'pointer',
+                        border: `1px solid ${active ? theme.palette.primary.main : theme.palette.custom.border}`,
+                        bgcolor: active ? alpha(theme.palette.primary.main, 0.06) : theme.palette.custom.codeBg,
+                        transition: 'all 0.15s',
+                        '&:hover': { borderColor: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                      }}>
+                        <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: active ? 'primary.main' : 'text.primary', mb: 0.25 }}>{label}</Typography>
+                        <Typography sx={{ fontSize: '0.65rem', color: theme.palette.custom.muted }}>{sub}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
 
               <Divider sx={{ borderColor: theme.palette.custom.border }} />
 
-              <Stack direction="row" gap={2}>
-                <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Retry Policy</InputLabel>
-                  <Select
-                    label="Retry Policy"
-                    value={destForm.retryPolicy}
-                    onChange={(e) => setDestForm({ ...destForm, retryPolicy: e.target.value })}
-                    sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-                  >
-                    <MenuItem value="none" sx={{ fontSize: '0.72rem' }}>None</MenuItem>
-                    <MenuItem value="immediate" sx={{ fontSize: '0.72rem' }}>Immediate</MenuItem>
-                    <MenuItem value="exponential" sx={{ fontSize: '0.72rem' }}>Exponential Backoff</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Auth Type</InputLabel>
-                  <Select
-                    label="Auth Type"
-                    value={destForm.authType}
-                    onChange={(e) => setDestForm({ ...destForm, authType: e.target.value })}
-                    sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-                  >
-                    <MenuItem value="none" sx={{ fontSize: '0.72rem' }}>None</MenuItem>
-                    <MenuItem value="bearer" sx={{ fontSize: '0.72rem' }}>Bearer Token</MenuItem>
-                    <MenuItem value="basic" sx={{ fontSize: '0.72rem' }}>Basic</MenuItem>
-                    <MenuItem value="hmac" sx={{ fontSize: '0.72rem' }}>HMAC</MenuItem>
-                    <MenuItem value="custom" sx={{ fontSize: '0.72rem' }}>Custom</MenuItem>
-                  </Select>
-                </FormControl>
+              {/* ── Destination list ─────────────────────────────────── */}
+              <Stack gap={1}>
+                {dests.map((dest, idx) => (
+                  editingDestId === dest.id ? (
+                    /* Inline edit form */
+                    <Stack key={dest.id} gap={1.5} sx={{ p: 2, border: `1px solid ${theme.palette.primary.main}`, borderRadius: 1, bgcolor: theme.palette.custom.inputBg }}>
+                      <Stack direction="row" gap={1.5} flexWrap="wrap">
+                        <TextField size="small" label="Label" value={editDest.label}
+                          onChange={(e) => setEditDest((d) => ({ ...d, label: e.target.value }))}
+                          sx={{ width: 150, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                          InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                          InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                        <TextField size="small" label="URL" value={editDest.url}
+                          onChange={(e) => setEditDest((d) => ({ ...d, url: e.target.value }))}
+                          sx={{ flex: 1, minWidth: 220, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                          InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                          InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                      </Stack>
+                      <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="center">
+                        <FormControl size="small" sx={{ minWidth: 110 }}>
+                          <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Auth Type</InputLabel>
+                          <Select label="Auth Type" value={editDest.authType}
+                            onChange={(e) => setEditDest((d) => ({ ...d, authType: e.target.value }))}
+                            sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}>
+                            {['none', 'bearer', 'basic', 'custom'].map((t) => (
+                              <MenuItem key={t} value={t} sx={{ fontSize: '0.72rem' }}>{t}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        {editDest.authType !== 'none' && (
+                          <TextField size="small" label="Auth Value" value={editDest.authValue} type="password"
+                            onChange={(e) => setEditDest((d) => ({ ...d, authValue: e.target.value }))}
+                            sx={{ minWidth: 160, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                            InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                            InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                        )}
+                        {editDest.authType === 'custom' && (
+                          <TextField size="small" label="Header Name" value={editDest.customAuthHeader}
+                            onChange={(e) => setEditDest((d) => ({ ...d, customAuthHeader: e.target.value }))}
+                            placeholder="Authorization"
+                            sx={{ minWidth: 160, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                            InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                            InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                        )}
+                        <FormControl size="small" sx={{ minWidth: 140 }}>
+                          <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Retry Policy</InputLabel>
+                          <Select label="Retry Policy" value={editDest.retryPolicy}
+                            onChange={(e) => setEditDest((d) => ({ ...d, retryPolicy: e.target.value }))}
+                            sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}>
+                            {['none', 'immediate', 'exponential'].map((t) => (
+                              <MenuItem key={t} value={t} sx={{ fontSize: '0.72rem' }}>{t}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Stack direction="row" alignItems="center" gap={0.5}
+                          sx={{ px: 1.25, height: 36, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, bgcolor: theme.palette.custom.codeBg, cursor: 'pointer' }}
+                          onClick={() => setEditDest((d) => ({ ...d, skipTlsVerify: !d.skipTlsVerify }))}>
+                          <Switch size="small" checked={editDest.skipTlsVerify} color="warning"
+                            onChange={(e) => setEditDest((d) => ({ ...d, skipTlsVerify: e.target.checked }))} />
+                          <Typography sx={{ fontSize: '0.65rem', fontFamily: MONO, color: theme.palette.custom.muted, whiteSpace: 'nowrap' }}>Skip TLS</Typography>
+                        </Stack>
+                        <Stack direction="row" gap={1} ml="auto">
+                          <Button variant="contained" size="small" onClick={handleEditSave} sx={{ fontSize: '0.72rem', height: 36 }}>Save</Button>
+                          <Button size="small" onClick={() => setEditingDestId(null)} sx={{ fontSize: '0.72rem', height: 36, color: theme.palette.custom.muted }}>Cancel</Button>
+                        </Stack>
+                      </Stack>
+                    </Stack>
+                  ) : (
+                    /* Read row */
+                    <Stack key={dest.id} direction="row" alignItems="center" gap={1.5}
+                      sx={{ px: 2, py: 1.25, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, bgcolor: theme.palette.custom.codeBg }}>
+                      {deliveryMode === 'fallback' && (
+                        <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'primary.main', fontWeight: 700 }}>{idx + 1}</Typography>
+                        </Box>
+                      )}
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.primary', mb: 0.25 }}>{dest.label}</Typography>
+                        <Typography sx={{ fontSize: '0.68rem', fontFamily: MONO, color: theme.palette.custom.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dest.url}</Typography>
+                      </Box>
+                      <Chip label={dest.authType} size="small" sx={{ fontSize: '0.58rem', height: 18, fontFamily: MONO }} />
+                      {!!dest.skipTlsVerify && <Chip label="TLS skip" size="small" color="warning" variant="outlined" sx={{ fontSize: '0.58rem', height: 18, fontFamily: MONO }} />}
+                      <Chip label={dest.retryPolicy} size="small" variant="outlined" sx={{ fontSize: '0.58rem', height: 18, fontFamily: MONO, borderColor: theme.palette.custom.border }} />
+                      <IconButton size="small" onClick={() => handleEditStart(dest)} sx={{ color: theme.palette.custom.muted, '&:hover': { color: 'primary.main' } }}>
+                        <EditIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDeleteDest(dest.id)} sx={{ color: theme.palette.custom.muted, '&:hover': { color: 'error.main' } }}>
+                        <DeleteIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </Stack>
+                  )
+                ))}
               </Stack>
 
-              {destForm.authType !== 'none' && (
-                <Stack gap={1.5}>
-                  {destForm.authType === 'custom' && (
-                    <TextField
-                      label="Header Key" fullWidth size="small"
-                      value={destForm.customAuthHeader}
-                      onChange={(e) => setDestForm({ ...destForm, customAuthHeader: e.target.value })}
-                      placeholder="Authorization"
+              {/* Add form */}
+              {showDestForm && (
+                <Stack gap={1.5} sx={{ p: 2, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, bgcolor: theme.palette.custom.inputBg }}>
+                  <Stack direction="row" gap={1.5} flexWrap="wrap">
+                    <TextField size="small" label="Label" value={newDest.label}
+                      onChange={(e) => { setNewDest((d) => ({ ...d, label: e.target.value })); if (newDestErrors.label) setNewDestErrors((e) => ({ ...e, label: false })); }}
+                      error={newDestErrors.label}
+                      helperText={newDestErrors.label ? 'Required' : undefined}
+                      sx={{ width: 150, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
                       InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
-                      InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
-                      sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-                    />
-                  )}
-                  <TextField
-                    label="Auth Value" fullWidth size="small" type="password"
-                    value={destForm.authValue}
-                    onChange={(e) => setDestForm({ ...destForm, authValue: e.target.value })}
-                    InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
-                    InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }}
-                    sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
-                  />
+                      InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                    <TextField size="small" label="URL" value={newDest.url}
+                      onChange={(e) => { setNewDest((d) => ({ ...d, url: e.target.value })); if (newDestErrors.url) setNewDestErrors((e) => ({ ...e, url: false })); }}
+                      error={newDestErrors.url}
+                      helperText={newDestErrors.url ? 'Required' : undefined}
+                      sx={{ flex: 1, minWidth: 220, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                      InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                      InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                  </Stack>
+                  <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="center">
+                    <FormControl size="small" sx={{ minWidth: 110 }}>
+                      <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Auth Type</InputLabel>
+                      <Select label="Auth Type" value={newDest.authType}
+                        onChange={(e) => setNewDest((d) => ({ ...d, authType: e.target.value }))}
+                        sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}>
+                        {['none', 'bearer', 'basic', 'custom'].map((t) => (
+                          <MenuItem key={t} value={t} sx={{ fontSize: '0.72rem' }}>{t}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {newDest.authType !== 'none' && (
+                      <TextField size="small" label="Auth Value" value={newDest.authValue} type="password"
+                        onChange={(e) => setNewDest((d) => ({ ...d, authValue: e.target.value }))}
+                        sx={{ minWidth: 160, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                        InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                        InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                    )}
+                    {newDest.authType === 'custom' && (
+                      <TextField size="small" label="Header Name" value={newDest.customAuthHeader}
+                        onChange={(e) => setNewDest((d) => ({ ...d, customAuthHeader: e.target.value }))}
+                        placeholder="Authorization"
+                        sx={{ minWidth: 160, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}
+                        InputProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem', height: 36 } }}
+                        InputLabelProps={{ sx: { fontFamily: MONO, fontSize: '0.72rem' } }} />
+                    )}
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <InputLabel sx={{ fontFamily: MONO, fontSize: '0.72rem' }}>Retry Policy</InputLabel>
+                      <Select label="Retry Policy" value={newDest.retryPolicy}
+                        onChange={(e) => setNewDest((d) => ({ ...d, retryPolicy: e.target.value }))}
+                        sx={{ fontSize: '0.72rem', fontFamily: MONO, height: 36, '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.custom.border } }}>
+                        {['none', 'immediate', 'exponential'].map((t) => (
+                          <MenuItem key={t} value={t} sx={{ fontSize: '0.72rem' }}>{t}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Stack direction="row" alignItems="center" gap={0.5}
+                      sx={{ px: 1.25, height: 36, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, bgcolor: theme.palette.custom.codeBg, cursor: 'pointer' }}
+                      onClick={() => setNewDest((d) => ({ ...d, skipTlsVerify: !d.skipTlsVerify }))}>
+                      <Switch size="small" checked={newDest.skipTlsVerify} color="warning"
+                        onChange={(e) => setNewDest((d) => ({ ...d, skipTlsVerify: e.target.checked }))} />
+                      <Typography sx={{ fontSize: '0.65rem', fontFamily: MONO, color: theme.palette.custom.muted, whiteSpace: 'nowrap' }}>Skip TLS</Typography>
+                    </Stack>
+                    <Stack direction="row" gap={1} ml="auto">
+                      <Button variant="contained" size="small" onClick={handleAddDest} sx={{ fontSize: '0.72rem', height: 36 }}>Add</Button>
+                      <Button size="small" onClick={() => { setShowDestForm(false); setNewDestErrors({ label: false, url: false }); }} sx={{ fontSize: '0.72rem', height: 36, color: theme.palette.custom.muted }}>Cancel</Button>
+                    </Stack>
+                  </Stack>
                 </Stack>
+              )}
+
+              {/* Always-visible Add Destination button */}
+              {!showDestForm && (
+                <Button startIcon={<AddIcon sx={{ fontSize: 14 }} />} onClick={() => { setShowDestForm(true); setEditingDestId(null); }}
+                  sx={{ fontSize: '0.72rem', color: 'primary.main', border: `1px dashed ${alpha(theme.palette.primary.main, 0.27)}`, borderRadius: 1, px: 2, py: 0.75, alignSelf: 'flex-start', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) } }}>
+                  Add Destination
+                </Button>
               )}
 
               <Divider sx={{ borderColor: theme.palette.custom.border }} />
 
-              {/* Skip TLS Verification */}
+              {/* ── Payload Override (applies to all destinations) ────── */}
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
-                  <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.12em' }}>
-                    SKIP TLS VERIFICATION
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.68rem', color: theme.palette.custom.muted, mt: 0.25 }}>
-                    Disable certificate validation (self-signed certs)
-                  </Typography>
+                  <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.12em' }}>PAYLOAD OVERRIDE</Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: theme.palette.custom.muted, mt: 0.25 }}>Send a static JSON to all destinations instead of the filtered payload</Typography>
                 </Box>
-                <Switch
-                  size="small"
-                  checked={destForm.skipTlsVerify}
-                  onChange={(e) => setDestForm({ ...destForm, skipTlsVerify: e.target.checked })}
-                  color="warning"
-                />
-              </Stack>
-
-              <Divider sx={{ borderColor: theme.palette.custom.border }} />
-
-              {/* Destination Override */}
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Box>
-                  <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.12em' }}>
-                    PAYLOAD OVERRIDE
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.68rem', color: theme.palette.custom.muted, mt: 0.25 }}>
-                    Send a static JSON instead of the filtered payload
-                  </Typography>
-                </Box>
-                <Switch
-                  size="small"
-                  checked={destForm.overrideEnabled}
-                  onChange={(e) => setDestForm({ ...destForm, overrideEnabled: e.target.checked })}
-                  color="primary"
-                />
+                <Switch size="small" checked={destForm.overrideEnabled}
+                  onChange={(e) => setDestForm({ ...destForm, overrideEnabled: e.target.checked })} color="primary" />
               </Stack>
 
               {destForm.overrideEnabled && (
@@ -884,8 +1046,7 @@ export default function FilterConfig() {
                   <Typography sx={{ fontSize: '0.58rem', fontFamily: MONO, color: theme.palette.custom.muted, letterSpacing: '0.1em', mb: 0.5 }}>
                     OVERRIDE JSON
                   </Typography>
-                  <TextField
-                    fullWidth multiline minRows={4}
+                  <TextField fullWidth multiline minRows={4}
                     placeholder={'{\n  "event": "override",\n  "source": "trapper"\n}'}
                     value={destForm.overridePayload}
                     onChange={(e) => setDestForm({ ...destForm, overridePayload: e.target.value })}
@@ -902,9 +1063,7 @@ export default function FilterConfig() {
                     Use {'{{'}'field.path'{'}}'}  to inject values from the original payload
                   </Typography>
                   {destForm.overridePayload && !(() => { try { JSON.parse(destForm.overridePayload); return true; } catch { return false; } })() && (
-                    <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>
-                      Invalid JSON
-                    </Typography>
+                    <Typography sx={{ fontSize: '0.6rem', fontFamily: MONO, color: 'error.main', mt: 0.5 }}>Invalid JSON</Typography>
                   )}
                 </Box>
               )}

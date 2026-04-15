@@ -40,6 +40,7 @@ export interface Trapper {
   overridePayload: string | null;
   skipTlsVerify: boolean;
   customAuthHeader: string | null;
+  deliveryMode: 'broadcast' | 'fallback';
 }
 
 export interface FilterRule {
@@ -72,6 +73,22 @@ export interface WebhookLog {
   responseCode: number | null;
   latency: number | null;
   errorMessage: string | null;
+  parentLogId: string | null;
+  destinationId: string | null;
+  destinationLabel: string | null;
+}
+
+export interface Destination {
+  id: string;
+  trapperId: string;
+  label: string;
+  url: string;
+  authType: 'bearer' | 'basic' | 'hmac' | 'none' | 'custom';
+  authValue: string | null;
+  customAuthHeader: string | null;
+  skipTlsVerify: boolean;
+  retryPolicy: 'exponential' | 'immediate' | 'none';
+  createdAt: string;
 }
 
 export interface LogsResponse {
@@ -128,6 +145,17 @@ export const trappersApi = {
     api.post(`/trappers/${id}/test`, { rules, payload }).then((r) => r.data),
   getLogs: (id: string, params?: { page?: number; limit?: number; status?: string; search?: string }) =>
     api.get<LogsResponse>(`/trappers/${id}/logs`, { params }).then((r) => r.data),
+};
+
+export const destinationsApi = {
+  list: (trapperId: string) =>
+    api.get<Destination[]>(`/trappers/${trapperId}/destinations`).then((r) => r.data),
+  create: (trapperId: string, data: Partial<Destination>) =>
+    api.post<Destination>(`/trappers/${trapperId}/destinations`, data).then((r) => r.data),
+  update: (trapperId: string, destId: string, data: Partial<Destination>) =>
+    api.put<Destination>(`/trappers/${trapperId}/destinations/${destId}`, data).then((r) => r.data),
+  delete: (trapperId: string, destId: string) =>
+    api.delete(`/trappers/${trapperId}/destinations/${destId}`),
 };
 
 export const statsApi = {
