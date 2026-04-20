@@ -35,6 +35,7 @@ export const filterRules = sqliteTable('filter_rules', {
   logicOp: text('logicOp').notNull().default('AND'),
   groupBefore: integer('groupBefore').notNull().default(0),
   groupAfter: integer('groupAfter').notNull().default(0),
+  createdAt: text('createdAt').notNull().default(sql`(datetime('now'))`),
 });
 
 export const destinations = sqliteTable('destinations', {

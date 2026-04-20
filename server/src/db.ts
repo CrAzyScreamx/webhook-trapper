@@ -44,7 +44,8 @@ export function initDb(): void {
       "order" INTEGER NOT NULL DEFAULT 0,
       logicOp TEXT NOT NULL DEFAULT 'AND',
       groupBefore INTEGER NOT NULL DEFAULT 0,
-      groupAfter INTEGER NOT NULL DEFAULT 0
+      groupAfter INTEGER NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS webhook_logs (
@@ -91,6 +92,7 @@ export function initDb(): void {
   try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN logicOp TEXT NOT NULL DEFAULT 'AND'`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN groupBefore INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN groupAfter INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN createdAt TEXT NOT NULL DEFAULT (datetime('now'))`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN updatedAt TEXT NOT NULL DEFAULT (datetime('now'))`); } catch { /* already exists */ }
 }
 
