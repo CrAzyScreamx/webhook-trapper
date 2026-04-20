@@ -131,6 +131,9 @@ router.put('/:id/rules', async (req: Request, res: Response) => {
           operator: r.operator,
           value: r.value ?? null,
           order: r.order ?? i,
+          logicOp: (r as { logicOp?: string }).logicOp ?? 'AND',
+          groupBefore: (r as { groupBefore?: number }).groupBefore ?? 0,
+          groupAfter: (r as { groupAfter?: number }).groupAfter ?? 0,
         }))
       ).returning().all()
     : [];

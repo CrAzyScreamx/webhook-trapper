@@ -88,6 +88,10 @@ export function initDb(): void {
   try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN destinationId TEXT`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN destinationLabel TEXT`); } catch { /* already exists */ }
   try { sqlite.exec(`ALTER TABLE trappers ADD COLUMN deliveryMode TEXT NOT NULL DEFAULT 'broadcast'`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN logicOp TEXT NOT NULL DEFAULT 'AND'`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN groupBefore INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE filter_rules ADD COLUMN groupAfter INTEGER NOT NULL DEFAULT 0`); } catch { /* already exists */ }
+  try { sqlite.exec(`ALTER TABLE webhook_logs ADD COLUMN updatedAt TEXT NOT NULL DEFAULT (datetime('now'))`); } catch { /* already exists */ }
 }
 
 export default db;
