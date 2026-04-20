@@ -66,6 +66,7 @@ export const webhookLogs = sqliteTable('webhook_logs', {
   destinationId: text('destinationId'),
   destinationLabel: text('destinationLabel'),
   createdAt: text('createdAt').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updatedAt').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 // Inferred types
