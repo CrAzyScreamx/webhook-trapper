@@ -84,7 +84,7 @@ export default function Layout() {
                   color: 'primary.main',
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.10) },
                 },
-                '&:hover': { bgcolor: alpha('#ffffff', 0.03), color: 'text.primary' },
+                '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04), color: 'text.primary' },
               })}
             >
               <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>{item.icon}</ListItemIcon>

@@ -199,7 +199,7 @@ export default function TrapperDetail() {
             {logs.map((log) => (
               <Fragment key={log.id}>
                 <TableRow
-                  sx={{ '& .MuiTableCell-root': { borderColor: expanded === log.id ? theme.palette.custom.border : alpha(theme.palette.custom.border, 0.09), py: 1 }, cursor: 'pointer', '&:hover': { bgcolor: alpha('#ffffff', 0.016) } }}
+                  sx={{ '& .MuiTableCell-root': { borderColor: expanded === log.id ? theme.palette.custom.border : alpha(theme.palette.custom.border, 0.09), py: 1 }, cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.06) } }}
                   onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                 >
                   <TableCell>
