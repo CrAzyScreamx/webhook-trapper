@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Box, Paper, TextField, Button, Typography, Alert } from '@mui/material';
+import { Box, Paper, TextField, Button, Typography, Alert, useTheme, useMediaQuery } from '@mui/material';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 
@@ -9,6 +10,8 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,62 +30,86 @@ export default function Login() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-      }}
-    >
-      <Paper
-        component="form"
-        onSubmit={handleSubmit}
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: isDesktop ? 'row' : 'column', bgcolor: 'background.default' }}>
+      <Box
         sx={{
-          p: 4,
-          width: '100%',
-          maxWidth: 380,
+          flex: isDesktop ? 1 : 'none',
+          py: isDesktop ? 0 : 4,
+          bgcolor: 'primary.dark',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
           gap: 2,
         }}
       >
+        <FilterAltIcon sx={{ fontSize: isDesktop ? 64 : 40, color: 'primary.main' }} />
         <Typography
-          variant="h5"
-          sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, textAlign: 'center', mb: 0 }}
+          variant={isDesktop ? 'h3' : 'h5'}
+          sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, color: 'common.white', textAlign: 'center' }}
         >
-          Welcome to Webhook Trapper
+          Webhook Trapper
         </Typography>
         <Typography
-          variant="h6"
-          sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, textAlign: 'center', mb: 1 }}
+          variant="body1"
+          sx={{ fontFamily: 'Inter, sans-serif', color: 'primary.main', mt: 1, textAlign: 'center', px: 4 }}
         >
-          Sign In
+          Capture, inspect &amp; route webhooks in real time
         </Typography>
+      </Box>
 
-        {error && <Alert severity="error">{error}</Alert>}
+      <Box sx={{ flex: isDesktop ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, md: 6 } }}>
+        <Paper
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            maxWidth: 400,
+            width: '100%',
+            p: 5,
+            borderRadius: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2.5,
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, textAlign: 'center', mb: 1 }}
+          >
+            Sign In
+          </Typography>
 
-        <TextField
-          label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-          fullWidth
-        />
-        <TextField
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          fullWidth
-        />
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <Button type="submit" variant="contained" fullWidth disabled={loading || !username || !password}>
-          {loading ? 'Signing in...' : 'Sign In'}
-        </Button>
-      </Paper>
+          <TextField
+            label="Username"
+            size="medium"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            fullWidth
+          />
+          <TextField
+            label="Password"
+            type="password"
+            size="medium"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            fullWidth
+          />
+
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            disabled={loading || !username || !password}
+            sx={{ mt: 1, py: 1.2 }}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </Button>
+        </Paper>
+      </Box>
     </Box>
   );
 }
