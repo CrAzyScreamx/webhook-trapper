@@ -49,6 +49,12 @@ export default function Login() {
         }}
       >
         <Typography
+          variant="h5"
+          sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, textAlign: 'center', mb: 0 }}
+        >
+          Welcome to Webhook Trapper
+        </Typography>
+        <Typography
           variant="h6"
           sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, textAlign: 'center', mb: 1 }}
         >
