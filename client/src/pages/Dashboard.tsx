@@ -155,7 +155,7 @@ export default function Dashboard() {
                     px: 2.5, py: 1.5,
                     borderBottom: i < Math.min(trappers.length, 6) - 1 ? `1px solid ${theme.palette.custom.border}` : 'none',
                     display: 'flex', alignItems: 'center', gap: 1.5,
-                    '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.06) },
+                    '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04) },
                   }}
                 >
                   <Box
@@ -224,7 +224,7 @@ export default function Dashboard() {
               </TableHead>
               <TableBody>
                 {feed.map((log) => (
-                  <TableRow key={log.id} sx={{ '& .MuiTableCell-root': { borderColor: alpha(theme.palette.custom.border, 0.06), py: 0.9 }, '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.06) } }}>
+                  <TableRow key={log.id} sx={{ '& .MuiTableCell-root': { borderColor: alpha(theme.palette.custom.border, 0.06), py: 0.9 }, '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04) } }}>
                     <TableCell>
                       <Box sx={{ px: 0.75, py: 0.2, bgcolor: alpha(theme.palette.primary.main, 0.08), borderRadius: 0.5, display: 'inline-block' }}>
                         <Typography sx={{ fontSize: '0.65rem', fontFamily: 'JetBrains Mono, monospace', color: 'primary.main', fontWeight: 600 }}>

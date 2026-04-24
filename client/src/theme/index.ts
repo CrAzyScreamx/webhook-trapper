@@ -87,5 +87,3 @@ export function getTheme(mode: 'light' | 'dark') {
     },
   });
 }
-
-export default getTheme('dark');

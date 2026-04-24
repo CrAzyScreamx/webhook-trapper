@@ -71,7 +71,7 @@ export default function Trappers() {
               border: `1px solid ${theme.palette.custom.border}`,
               px: 2.5, py: 2,
               display: 'flex', alignItems: 'center', gap: 2,
-              '&:hover': { borderColor: theme.palette.custom.hoverBorder, bgcolor: alpha(theme.palette.text.primary, 0.06) },
+              '&:hover': { borderColor: theme.palette.custom.hoverBorder, bgcolor: alpha(theme.palette.text.primary, 0.04) },
               transition: 'all 0.15s',
             }}
           >
