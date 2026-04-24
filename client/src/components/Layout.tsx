@@ -1,10 +1,13 @@
-import { Box, Typography, List, ListItemButton, ListItemIcon, ListItemText, Divider, Stack } from '@mui/material';
+import { Box, Typography, List, ListItemButton, ListItemIcon, ListItemText, Divider, Stack, IconButton } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import PendingIcon from '@mui/icons-material/Pending';
 import LogoutIcon from '@mui/icons-material/Logout';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useThemeContext } from '../context/ThemeContext';
 
 const SIDEBAR_W = 232;
 
@@ -17,6 +20,7 @@ const navItems = [
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { mode, toggleTheme } = useThemeContext();
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -52,9 +56,12 @@ export default function Layout() {
             >
               <FilterAltIcon sx={{ fontSize: 14, color: 'primary.main' }} />
             </Box>
-            <Typography sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'text.primary', letterSpacing: '0.04em' }}>
+            <Typography sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'text.primary', letterSpacing: '0.04em', flexGrow: 1 }}>
               WEBHOOK TRAPPER
             </Typography>
+            <IconButton onClick={toggleTheme} size="small" sx={{ color: 'text.primary' }}>
+              {mode === 'dark' ? <LightModeIcon sx={{ fontSize: 16 }} /> : <DarkModeIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
           </Stack>
         </Box>
 
@@ -77,7 +84,7 @@ export default function Layout() {
                   color: 'primary.main',
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.10) },
                 },
-                '&:hover': { bgcolor: alpha('#ffffff', 0.03), color: 'text.primary' },
+                '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.03), color: 'text.primary' },
               })}
             >
               <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>{item.icon}</ListItemIcon>
