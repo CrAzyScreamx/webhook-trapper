@@ -35,7 +35,7 @@ export default function Login() {
         sx={{
           flex: isDesktop ? 1 : 'none',
           py: isDesktop ? 0 : 4,
-          bgcolor: 'primary.dark',
+          background: `linear-gradient(160deg, ${theme.palette.primary.dark} 0%, #0d1b4b 100%)`,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -43,7 +43,7 @@ export default function Login() {
           gap: 2,
         }}
       >
-        <FilterAltIcon sx={{ fontSize: isDesktop ? 64 : 40, color: 'primary.main' }} />
+        <FilterAltIcon sx={{ fontSize: isDesktop ? 64 : 40, color: 'common.white' }} />
         <Typography
           variant={isDesktop ? 'h3' : 'h5'}
           sx={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, color: 'common.white', textAlign: 'center' }}
@@ -52,7 +52,7 @@ export default function Login() {
         </Typography>
         <Typography
           variant="body1"
-          sx={{ fontFamily: 'Inter, sans-serif', color: 'primary.main', mt: 1, textAlign: 'center', px: 4 }}
+          sx={{ fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,0.85)', mt: 1, textAlign: 'center', px: 4 }}
         >
           Capture, inspect &amp; route webhooks in real time
         </Typography>

@@ -27,8 +27,8 @@ router.get('/', async (_req: Request, res: Response) => {
 // POST /api/trappers
 router.post('/', async (req: Request, res: Response) => {
   const { name, description, trapId, destinationUrl, retryPolicy, authType, authValue, rateLimit, rateLimitWindowMs, hmacSecret, hmacHeader, hmacAlgorithm, overrideEnabled, overridePayload, skipTlsVerify, customAuthHeader } = req.body;
-  if (!name || !trapId || !destinationUrl) {
-    res.status(400).json({ error: 'name, trapId and destinationUrl are required' });
+  if (!name || !trapId) {
+    res.status(400).json({ error: 'name and trapId are required' });
     return;
   }
   const existing = db.select().from(trappers).where(eq(trappers.trapId, trapId)).get();
@@ -42,7 +42,7 @@ router.post('/', async (req: Request, res: Response) => {
     description: description ?? null,
     trapId,
     status: 'active',
-    destinationUrl,
+    destinationUrl: destinationUrl ?? '',
     retryPolicy: retryPolicy ?? 'none',
     authType: authType ?? 'none',
     authValue: authValue ?? null,
