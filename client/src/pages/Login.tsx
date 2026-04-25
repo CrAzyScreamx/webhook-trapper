@@ -77,7 +77,7 @@ export default function Login() {
       {/* Grid background */}
       <Box
         sx={{
-          position: 'fixed',
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
@@ -92,7 +92,7 @@ export default function Login() {
       {/* Orb A */}
       <Box
         sx={{
-          position: 'fixed',
+          position: 'absolute',
           top: '10%',
           left: '15%',
           width: 500,
@@ -109,7 +109,7 @@ export default function Login() {
       {/* Orb B */}
       <Box
         sx={{
-          position: 'fixed',
+          position: 'absolute',
           bottom: '10%',
           right: '15%',
           width: 400,
@@ -283,6 +283,9 @@ export default function Login() {
         sx={{
           position: 'absolute',
           bottom: 20,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
           fontFamily: 'JetBrains Mono, monospace',
           fontSize: '0.68rem',
           color: 'rgba(166,200,255,0.2)',
