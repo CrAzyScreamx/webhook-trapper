@@ -114,14 +114,6 @@ export default function Trappers() {
               </Typography>
             </Box>
 
-            {/* Destination */}
-            <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0, maxWidth: 200 }}>
-              <Typography sx={{ fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', color: theme.palette.custom.muted, letterSpacing: '0.08em', mb: 0.25 }}>DESTINATION</Typography>
-              <Typography sx={{ fontSize: '0.72rem', color: theme.palette.custom.hoverBorder, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {t.destinationUrl}
-              </Typography>
-            </Box>
-
             {/* Toggle + actions */}
             <Stack direction="row" alignItems="center" gap={0.5}>
               <Switch
