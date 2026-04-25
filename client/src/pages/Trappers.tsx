@@ -16,7 +16,7 @@ export default function Trappers() {
   const theme = useTheme();
   const [trappers, setTrappers] = useState<Trapper[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', trapId: '', destinationUrl: '' });
+  const [form, setForm] = useState({ name: '', description: '', trapId: '' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -26,7 +26,7 @@ export default function Trappers() {
   const handleCreate = async () => {
     await trappersApi.create(form);
     setOpen(false);
-    setForm({ name: '', description: '', trapId: '', destinationUrl: '' });
+    setForm({ name: '', description: '', trapId: '' });
     load();
   };
 
@@ -168,11 +168,10 @@ export default function Trappers() {
             helperText={`Endpoint: POST /api/h/${form.trapId || '<trap-id>'}`}
             InputProps={{ sx: { fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' } }}
           />
-          <TextField label="Destination URL" value={form.destinationUrl} onChange={(e) => setForm({ ...form, destinationUrl: e.target.value })} fullWidth size="small" />
         </DialogContent>
         <DialogActions sx={{ borderTop: `1px solid ${theme.palette.custom.border}`, px: 3, py: 2 }}>
           <Button onClick={() => setOpen(false)} sx={{ color: theme.palette.custom.muted }}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={!form.name || !form.trapId || !form.destinationUrl}>
+          <Button variant="contained" onClick={handleCreate} disabled={!form.name || !form.trapId}>
             Create
           </Button>
         </DialogActions>
