@@ -113,7 +113,7 @@ export default function QueueDashboard() {
   );
 
   return (
-    <Box>
+    <Box sx={{ maxWidth: 1100 }}>
       {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
         <Box>
@@ -247,6 +247,7 @@ export default function QueueDashboard() {
             return (
               <Paper
                 key={job.jobId}
+                onClick={() => toggleJob(job.jobId)}
                 sx={{
                   borderLeft: `3px solid ${theme.palette.error.main}`,
                   px: 2.5,
@@ -263,8 +264,6 @@ export default function QueueDashboard() {
                     alignItems="center"
                     gap={1}
                     flexWrap="wrap"
-                    onClick={() => toggleJob(job.jobId)}
-                    sx={{ cursor: 'pointer' }}
                   >
                     <Chip
                       label={job.data?.trapperId ?? '—'}
@@ -310,7 +309,7 @@ export default function QueueDashboard() {
                   </Stack>
 
                   <Collapse in={isExpanded} timeout={200}>
-                    <Stack spacing={1} mt={1}>
+                    <Stack spacing={1} mt={1} onClick={(e) => e.stopPropagation()}>
                       {/* Row 2: Payload */}
                       <Tooltip title={<pre style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem' }}>{JSON.stringify(job.data?.payload, null, 2)}</pre>} placement="top">
                         <Box sx={{
