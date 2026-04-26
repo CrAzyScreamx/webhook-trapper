@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useReducer } from 'react';
 import {
-  Box, Typography, Paper, Stack, Grid, Chip, Skeleton, Tooltip, Button
+  Box, Typography, Paper, Stack, Grid, Chip, Skeleton, Tooltip, Button, Collapse
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { queueApi, type FailedJob } from '../api/client';
 import LiveDot from '../components/LiveDot';
 
@@ -28,6 +29,7 @@ export default function QueueDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   const fetchAll = useCallback(async () => {
@@ -53,6 +55,15 @@ export default function QueueDashboard() {
     const t = setInterval(() => forceUpdate(), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const toggleJob = (jobId: string) => {
+    setExpandedJobs(prev => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  };
 
   const handleRetry = async (jobId: string) => {
     try {
@@ -231,114 +242,135 @@ export default function QueueDashboard() {
       ) : (
         /* Failed Job Cards */
         <Stack spacing={1.5}>
-          {failedJobs.map((job) => (
-            <Paper
-              key={job.jobId}
-              sx={{
-                borderLeft: `3px solid ${theme.palette.error.main}`,
-                px: 2.5,
-                py: 2,
-                transition: 'all 0.2s ease',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
-              }}
-            >
-              <Stack spacing={1}>
-                {/* Row 1: Identity */}
-                <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-                  <Chip
-                    label={job.data?.trapperId ?? '—'}
-                    size="small"
-                    sx={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: '0.7rem',
-                      height: 20,
-                      bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      color: theme.palette.primary.main,
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                      '& .MuiChip-label': { px: 1 },
-                    }}
-                  />
-                  <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted, flexGrow: 1 }}>
-                    #{job.jobId}
-                  </Typography>
-                  <Chip
-                    label={`ATTEMPTS: ${job.attemptsMade}`}
-                    size="small"
-                    sx={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: '0.65rem',
-                      height: 18,
-                      bgcolor: job.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.custom.muted, 0.1),
-                      color: job.attemptsMade > 1 ? theme.palette.error.main : theme.palette.custom.muted,
-                      border: `1px solid ${job.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.custom.muted, 0.2)}`,
-                      '& .MuiChip-label': { px: 1 },
-                    }}
-                  />
-                  <Stack direction="row" alignItems="center" gap={0.4}>
-                    <AccessTimeIcon sx={{ fontSize: '0.7rem', color: theme.palette.custom.muted }} />
-                    <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted }}>
-                      {relativeTime(job.timestamp)}
-                    </Typography>
-                  </Stack>
-                </Stack>
-
-                {/* Row 2: Payload */}
-                <Tooltip title={<pre style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem' }}>{JSON.stringify(job.data?.payload, null, 2)}</pre>} placement="top">
-                  <Box sx={{
-                    bgcolor: theme.palette.custom.codeBg,
-                    border: `1px solid ${theme.palette.custom.border}`,
-                    borderRadius: 0.75,
-                    px: 1.5,
-                    py: 0.75,
-                    overflow: 'hidden',
-                    cursor: 'default',
-                  }}>
-                    <Typography component="pre" sx={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: '0.68rem',
-                      color: theme.palette.custom.muted,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      m: 0,
-                    }}>
-                      {JSON.stringify(job.data?.payload ?? '')}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-
-                {/* Row 3: Error */}
-                <Stack direction="row" alignItems="flex-start" gap={0.75}>
-                  <ErrorOutlineIcon sx={{ fontSize: '0.85rem', color: theme.palette.error.main, mt: '2px', flexShrink: 0 }} />
-                  <Typography sx={{ fontSize: '0.75rem', color: theme.palette.error.main, lineHeight: 1.4, fontFamily: 'Inter, sans-serif' }}>
-                    {job.failedReason}
-                  </Typography>
-                </Stack>
-
-                {/* Row 4: Actions */}
-                <Stack direction="row" justifyContent="flex-end">
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<ReplayIcon />}
-                    onClick={() => handleRetry(job.jobId)}
-                    sx={{
-                      fontFamily: 'Space Grotesk, sans-serif',
-                      fontSize: '0.72rem',
-                      borderColor: alpha(theme.palette.error.main, 0.35),
-                      color: theme.palette.error.main,
-                      '&:hover': {
-                        borderColor: theme.palette.error.main,
-                        bgcolor: alpha(theme.palette.error.main, 0.06),
-                      },
-                    }}
+          {failedJobs.map((job) => {
+            const isExpanded = expandedJobs.has(job.jobId);
+            return (
+              <Paper
+                key={job.jobId}
+                sx={{
+                  borderLeft: `3px solid ${theme.palette.error.main}`,
+                  px: 2.5,
+                  py: 2,
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                }}
+              >
+                <Stack spacing={1}>
+                  {/* Row 1: Identity */}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    gap={1}
+                    flexWrap="wrap"
+                    onClick={() => toggleJob(job.jobId)}
+                    sx={{ cursor: 'pointer' }}
                   >
-                    Retry
-                  </Button>
+                    <Chip
+                      label={job.data?.trapperId ?? '—'}
+                      size="small"
+                      sx={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '0.7rem',
+                        height: 20,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        color: theme.palette.primary.main,
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        '& .MuiChip-label': { px: 1 },
+                      }}
+                    />
+                    <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted, flexGrow: 1 }}>
+                      #{job.jobId}
+                    </Typography>
+                    <Chip
+                      label={`ATTEMPTS: ${job.attemptsMade}`}
+                      size="small"
+                      sx={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '0.65rem',
+                        height: 18,
+                        bgcolor: job.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.custom.muted, 0.1),
+                        color: job.attemptsMade > 1 ? theme.palette.error.main : theme.palette.custom.muted,
+                        border: `1px solid ${job.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.custom.muted, 0.2)}`,
+                        '& .MuiChip-label': { px: 1 },
+                      }}
+                    />
+                    <Stack direction="row" alignItems="center" gap={0.4}>
+                      <AccessTimeIcon sx={{ fontSize: '0.7rem', color: theme.palette.custom.muted }} />
+                      <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted }}>
+                        {relativeTime(job.timestamp)}
+                      </Typography>
+                    </Stack>
+                    <ExpandMoreIcon sx={{
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      color: theme.palette.custom.muted,
+                      fontSize: '1rem',
+                    }} />
+                  </Stack>
+
+                  <Collapse in={isExpanded} timeout={200}>
+                    <Stack spacing={1} mt={1}>
+                      {/* Row 2: Payload */}
+                      <Tooltip title={<pre style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem' }}>{JSON.stringify(job.data?.payload, null, 2)}</pre>} placement="top">
+                        <Box sx={{
+                          bgcolor: theme.palette.custom.codeBg,
+                          border: `1px solid ${theme.palette.custom.border}`,
+                          borderRadius: 0.75,
+                          px: 1.5,
+                          py: 0.75,
+                          overflow: 'hidden',
+                          cursor: 'default',
+                        }}>
+                          <Typography component="pre" sx={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '0.68rem',
+                            color: theme.palette.custom.muted,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            m: 0,
+                          }}>
+                            {JSON.stringify(job.data?.payload ?? '')}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+
+                      {/* Row 3: Error */}
+                      <Stack direction="row" alignItems="flex-start" gap={0.75}>
+                        <ErrorOutlineIcon sx={{ fontSize: '0.85rem', color: theme.palette.error.main, mt: '2px', flexShrink: 0 }} />
+                        <Typography sx={{ fontSize: '0.75rem', color: theme.palette.error.main, lineHeight: 1.4, fontFamily: 'Inter, sans-serif' }}>
+                          {job.failedReason}
+                        </Typography>
+                      </Stack>
+
+                      {/* Row 4: Actions */}
+                      <Stack direction="row" justifyContent="flex-end">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ReplayIcon />}
+                          onClick={(e) => { e.stopPropagation(); handleRetry(job.jobId); }}
+                          sx={{
+                            fontFamily: 'Space Grotesk, sans-serif',
+                            fontSize: '0.72rem',
+                            borderColor: alpha(theme.palette.error.main, 0.35),
+                            color: theme.palette.error.main,
+                            '&:hover': {
+                              borderColor: theme.palette.error.main,
+                              bgcolor: alpha(theme.palette.error.main, 0.06),
+                            },
+                          }}
+                        >
+                          Retry
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Collapse>
                 </Stack>
-              </Stack>
-            </Paper>
-          ))}
+              </Paper>
+            );
+          })}
         </Stack>
       )}
     </Box>
