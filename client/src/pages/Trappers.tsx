@@ -551,7 +551,7 @@ export default function Trappers() {
           <Button
             variant="contained"
             onClick={handleCreate}
-            disabled={!form.name || !form.trapId}
+            disabled={!form.name || !form.trapId || !form.destinationUrl}
           >
             Create
           </Button>
