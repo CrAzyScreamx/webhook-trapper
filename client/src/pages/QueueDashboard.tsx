@@ -291,81 +291,88 @@ export default function QueueDashboard() {
         </Stack>
       )}
       <Drawer
-        anchor="left"
+        anchor="right"
         open={selectedJob !== null}
         onClose={() => setSelectedJob(null)}
         PaperProps={{
           sx: {
             width: 420,
+            maxWidth: '100vw',
             bgcolor: 'background.paper',
-            p: 3,
             display: 'flex',
             flexDirection: 'column',
-            gap: 2.5,
+            overflow: 'hidden',
           },
         }}
       >
         {selectedJob && (
           <>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={700} fontSize="1rem">
-                Job Details
-              </Typography>
-              <IconButton size="small" onClick={() => setSelectedJob(null)}>
-                <CloseIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Stack>
-
-            <Divider sx={{ borderColor: theme.palette.custom.border }} />
-
-            <Stack spacing={1}>
-              <Stack direction="row" gap={1} flexWrap="wrap">
-                <Chip
-                  label={selectedJob.data?.trapperId ?? '—'}
-                  size="small"
-                  sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem', height: 20, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, '& .MuiChip-label': { px: 1 } }}
-                />
-                <Chip
-                  label={`ATTEMPTS: ${selectedJob.attemptsMade}`}
-                  size="small"
-                  sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', height: 20, bgcolor: selectedJob.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.custom.muted, 0.1), color: selectedJob.attemptsMade > 1 ? theme.palette.error.main : theme.palette.custom.muted, border: `1px solid ${selectedJob.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.custom.muted, 0.2)}`, '& .MuiChip-label': { px: 1 } }}
-                />
+            {/* Fixed header */}
+            <Box sx={{ p: 3, pb: 0, flexShrink: 0 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={700} fontSize="1rem">
+                  Job Details
+                </Typography>
+                <IconButton size="small" onClick={() => setSelectedJob(null)}>
+                  <CloseIcon sx={{ fontSize: 18 }} />
+                </IconButton>
               </Stack>
-              <Stack direction="row" alignItems="center" gap={0.5}>
-                <AccessTimeIcon sx={{ fontSize: '0.75rem', color: theme.palette.custom.muted }} />
-                <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem', color: theme.palette.custom.muted }}>
-                  {relativeTime(selectedJob.timestamp)} · {new Date(selectedJob.timestamp).toLocaleString()}
+
+              <Divider sx={{ borderColor: theme.palette.custom.border }} />
+
+              <Stack spacing={1} mt={2}>
+                <Stack direction="row" gap={1} flexWrap="wrap">
+                  <Chip
+                    label={selectedJob.data?.trapperId ?? '—'}
+                    size="small"
+                    sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem', height: 20, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, '& .MuiChip-label': { px: 1 } }}
+                  />
+                  <Chip
+                    label={`ATTEMPTS: ${selectedJob.attemptsMade}`}
+                    size="small"
+                    sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', height: 20, bgcolor: selectedJob.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.custom.muted, 0.1), color: selectedJob.attemptsMade > 1 ? theme.palette.error.main : theme.palette.custom.muted, border: `1px solid ${selectedJob.attemptsMade > 1 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.custom.muted, 0.2)}`, '& .MuiChip-label': { px: 1 } }}
+                  />
+                </Stack>
+                <Stack direction="row" alignItems="center" gap={0.5}>
+                  <AccessTimeIcon sx={{ fontSize: '0.75rem', color: theme.palette.custom.muted }} />
+                  <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem', color: theme.palette.custom.muted }}>
+                    {relativeTime(selectedJob.timestamp)} · {new Date(selectedJob.timestamp).toLocaleString()}
+                  </Typography>
+                </Stack>
+                <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted }}>
+                  Job ID: #{selectedJob.jobId}
                 </Typography>
               </Stack>
-              <Typography sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', color: theme.palette.custom.muted }}>
-                Job ID: #{selectedJob.jobId}
-              </Typography>
-            </Stack>
+            </Box>
 
-            <Box>
-              <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={600} fontSize="0.8rem" mb={1}>
-                Payload
-              </Typography>
-              <Box sx={{ bgcolor: theme.palette.custom.codeBg, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, p: 1.5, overflowX: 'auto' }}>
-                <Typography component="pre" sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.72rem', color: theme.palette.text.primary, m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                  {JSON.stringify(selectedJob.data?.payload, null, 2)}
+            {/* Scrollable content */}
+            <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              <Box>
+                <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={600} fontSize="0.8rem" mb={1}>
+                  Payload
                 </Typography>
+                <Box sx={{ bgcolor: theme.palette.custom.codeBg, border: `1px solid ${theme.palette.custom.border}`, borderRadius: 1, p: 1.5, overflowX: 'auto' }}>
+                  <Typography component="pre" sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.72rem', color: theme.palette.text.primary, m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                    {JSON.stringify(selectedJob.data?.payload, null, 2)}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={600} fontSize="0.8rem" mb={1}>
+                  Error
+                </Typography>
+                <Stack direction="row" alignItems="flex-start" gap={0.75}>
+                  <ErrorOutlineIcon sx={{ fontSize: '0.9rem', color: 'error.main', mt: '2px', flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: '0.8rem', color: 'error.main', lineHeight: 1.5, fontFamily: 'Inter, sans-serif' }}>
+                    {selectedJob.failedReason}
+                  </Typography>
+                </Stack>
               </Box>
             </Box>
 
-            <Box>
-              <Typography fontFamily="Space Grotesk, sans-serif" fontWeight={600} fontSize="0.8rem" mb={1}>
-                Error
-              </Typography>
-              <Stack direction="row" alignItems="flex-start" gap={0.75}>
-                <ErrorOutlineIcon sx={{ fontSize: '0.9rem', color: 'error.main', mt: '2px', flexShrink: 0 }} />
-                <Typography sx={{ fontSize: '0.8rem', color: 'error.main', lineHeight: 1.5, fontFamily: 'Inter, sans-serif' }}>
-                  {selectedJob.failedReason}
-                </Typography>
-              </Stack>
-            </Box>
-
-            <Box sx={{ mt: 'auto' }}>
+            {/* Fixed footer */}
+            <Box sx={{ p: 3, pt: 0, flexShrink: 0 }}>
               <Button
                 fullWidth
                 variant="outlined"
