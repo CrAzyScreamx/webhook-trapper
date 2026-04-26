@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useReducer } from 'react';
 import {
   Box, Typography, Paper, Stack, Grid, Chip, Skeleton, Tooltip, Button
 } from '@mui/material';
@@ -28,7 +28,7 @@ export default function QueueDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -50,7 +50,7 @@ export default function QueueDashboard() {
   }, [fetchAll]);
 
   useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 1000);
+    const t = setInterval(() => forceUpdate(), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -67,7 +67,7 @@ export default function QueueDashboard() {
     setRetryingAll(true);
     try {
       for (const job of failedJobs) {
-        await queueApi.retryJob(job.jobId!);
+        await queueApi.retryJob(job.jobId);
       }
       await fetchAll();
     } finally {
@@ -76,7 +76,6 @@ export default function QueueDashboard() {
   };
 
   const refreshLabel = (() => {
-    void tick; // reference tick to trigger re-render
     if (!lastUpdated) return 'Fetching…';
     const s = Math.floor((Date.now() - lastUpdated.getTime()) / 1000);
     if (s < 10) return 'just now';
@@ -322,7 +321,7 @@ export default function QueueDashboard() {
                     size="small"
                     variant="outlined"
                     startIcon={<ReplayIcon />}
-                    onClick={() => handleRetry(job.jobId!)}
+                    onClick={() => handleRetry(job.jobId)}
                     sx={{
                       fontFamily: 'Space Grotesk, sans-serif',
                       fontSize: '0.72rem',
