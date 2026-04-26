@@ -198,7 +198,7 @@ export default function Dashboard() {
 
         {/* Status donut chart */}
         <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, height: 220, border: `1px solid ${theme.palette.custom.border}` }}>
+          <Paper sx={{ p: 2, height: 220, border: `1px solid ${theme.palette.custom.border}` }}>
             <Typography sx={{ fontSize: '0.65rem', fontFamily: 'JetBrains Mono, monospace', color: theme.palette.custom.muted, letterSpacing: '0.12em', mb: 1 }}>
               STATUS DISTRIBUTION
             </Typography>
@@ -213,13 +213,13 @@ export default function Dashboard() {
                 <PieChart
                   series={[{
                     data: donutData,
-                    innerRadius: 48,
-                    outerRadius: 72,
+                    innerRadius: 36,
+                    outerRadius: 54,
                     paddingAngle: 2,
                     cornerRadius: 3,
                     highlightScope: { faded: 'global', highlighted: 'item' },
                   }]}
-                  height={160}
+                  height={120}
                   margin={{ top: 0, bottom: 0, left: 0, right: 0 }}
                   legend={{ hidden: true }}
                 />
