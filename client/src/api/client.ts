@@ -124,6 +124,16 @@ export interface FailedJob {
   timestamp: number;
 }
 
+export interface QueueJob {
+  jobId: string;
+  data: { trapperId: string; payload: unknown; destinationUrl?: string };
+  failedReason: string | null;
+  attemptsMade: number;
+  timestamp: number;
+  maxAttempts: number | null;
+  state?: string;
+}
+
 export const authApi = {
   login: (username: string, password: string) =>
     api.post<{ token: string }>('/auth/login', { username, password }).then((r) => r.data),
@@ -172,6 +182,12 @@ export const queueApi = {
   getStats: () => api.get<QueueStats>('/queue/stats').then((r) => r.data),
   getFailed: () => api.get<FailedJob[]>('/queue/failed').then((r) => r.data),
   retryJob: (jobId: string) => api.post(`/queue/retry/${jobId}`).then((r) => r.data),
+  getJobs: (state: 'waiting' | 'active' | 'delayed') =>
+    api.get<QueueJob[]>('/queue/jobs', { params: { state } }).then((r) => r.data),
+  deleteJob: (jobId: string) =>
+    api.delete(`/queue/failed/${jobId}`).then((r) => r.data),
+  clearAllFailed: () =>
+    api.delete('/queue/failed').then((r) => r.data),
 };
 
 export default api;
