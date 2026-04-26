@@ -10,10 +10,11 @@ router.get('/', async (_req: Request, res: Response) => {
   todayStart.setHours(0, 0, 0, 0);
   const todayIso = todayStart.toISOString();
 
-  const [totalToday, sent, filtered, avgLatencyResult, activeTrappers] = [
+  const [totalToday, sent, filtered, rejected, avgLatencyResult, activeTrappers] = [
     db.select({ total: count() }).from(webhookLogs).where(gte(webhookLogs.timestamp, todayIso)).get()!.total,
     db.select({ total: count() }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), eq(webhookLogs.status, 'SENT'))).get()!.total,
     db.select({ total: count() }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), eq(webhookLogs.status, 'FILTERED'))).get()!.total,
+    db.select({ total: count() }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), eq(webhookLogs.status, 'REJECTED'))).get()!.total,
     db.select({ avg: avg(webhookLogs.latency) }).from(webhookLogs).where(and(gte(webhookLogs.timestamp, todayIso), isNotNull(webhookLogs.latency))).get(),
     db.select({ total: count() }).from(trappers).where(eq(trappers.status, 'active')).get()!.total,
   ];
@@ -40,6 +41,7 @@ router.get('/', async (_req: Request, res: Response) => {
     totalToday,
     sent,
     filtered,
+    rejected,
     avgLatency: avgLatencyResult?.avg != null ? Number(avgLatencyResult.avg) : null,
     activeTrappers,
     hourly: Object.values(hourlyBuckets),
