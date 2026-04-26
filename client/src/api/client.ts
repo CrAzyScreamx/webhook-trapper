@@ -102,6 +102,7 @@ export interface Stats {
   totalToday: number;
   sent: number;
   filtered: number;
+  rejected: number;
   avgLatency: number | null;
   activeTrappers: number;
   hourly: { hour: number; sent: number; filtered: number; rejected: number }[];
