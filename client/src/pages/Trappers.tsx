@@ -20,7 +20,7 @@ export default function Trappers() {
   const theme = useTheme();
   const [trappers, setTrappers] = useState<Trapper[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', trapId: '', destinationUrl: '' });
+  const [form, setForm] = useState({ name: '', description: '', trapId: '' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
@@ -33,7 +33,7 @@ export default function Trappers() {
   const handleCreate = async () => {
     await trappersApi.create(form);
     setOpen(false);
-    setForm({ name: '', description: '', trapId: '', destinationUrl: '' });
+    setForm({ name: '', description: '', trapId: '' });
     load();
   };
 
@@ -334,47 +334,6 @@ export default function Trappers() {
                   </Tooltip>
                 </Stack>
 
-                {/* Destination URL row */}
-                <Stack direction="row" alignItems="center" gap={0.5}>
-                  {t.destinationUrl ? (
-                    <>
-                      <Typography
-                        sx={{
-                          fontSize: '0.65rem',
-                          fontFamily: 'JetBrains Mono, monospace',
-                          color: theme.palette.primary.main,
-                          flexGrow: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {t.destinationUrl}
-                      </Typography>
-                      <Tooltip title="Copy destination URL">
-                        <IconButton
-                          size="small"
-                          onClick={() => copyToClipboard(t.destinationUrl)}
-                          sx={{ color: theme.palette.custom.muted, '&:hover': { color: 'primary.main' } }}
-                        >
-                          <ContentCopyIcon sx={{ fontSize: '0.85rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    <Typography
-                      sx={{
-                        fontSize: '0.65rem',
-                        fontFamily: 'JetBrains Mono, monospace',
-                        color: theme.palette.custom.muted,
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      No destination configured
-                    </Typography>
-                  )}
-                </Stack>
-
                 {/* Badge row */}
                 <Stack direction="row" gap={0.75} flexWrap="wrap" alignItems="center">
                   {retryLabel(t.retryPolicy)}
@@ -526,15 +485,6 @@ export default function Trappers() {
             size="small"
           />
           <TextField
-            label="Destination URL"
-            value={form.destinationUrl}
-            onChange={(e) => setForm({ ...form, destinationUrl: e.target.value })}
-            fullWidth
-            size="small"
-            helperText="Where intercepted webhooks will be forwarded"
-            InputProps={{ sx: { fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' } }}
-          />
-          <TextField
             label="Trap ID (slug)"
             value={form.trapId}
             onChange={(e) => setForm({ ...form, trapId: e.target.value })}
@@ -551,7 +501,7 @@ export default function Trappers() {
           <Button
             variant="contained"
             onClick={handleCreate}
-            disabled={!form.name || !form.trapId || !form.destinationUrl}
+            disabled={!form.name || !form.trapId}
           >
             Create
           </Button>
